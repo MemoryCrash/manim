@@ -1,7 +1,8 @@
 \documentclass[preview]{standalone}
 
 \usepackage[english]{babel}
-% \usepackage[utf8x]{inputenc}
+%如果放开CTEX则把下面的inputtenc注释掉
+\usepackage[utf8x]{inputenc}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{dsfont}
@@ -15,7 +16,9 @@
 \usepackage{ragged2e}
 \usepackage{physics}
 \usepackage{xcolor}
-\usepackage[UTF8]{ctex}
+%注释掉的原因是在mac上CTex会找不到字符格式
+%ubuntu下是可以正常运行
+%\usepackage[UTF8]{ctex}
 \linespread{1}
 
 \begin{document}
