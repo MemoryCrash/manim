@@ -1,3 +1,4 @@
+# _*_ coding:utf-8 _*_
 from helpers import *
 
 from scene import Scene
@@ -10,6 +11,7 @@ from topics.number_line import NumberLine
 from topics.functions import ParametricFunction
 from topics.geometry import Rectangle, DashedLine, Line
 
+#图场景
 class GraphScene(Scene):
     CONFIG = {
         "x_min" : -1,
@@ -123,6 +125,10 @@ class GraphScene(Scene):
         result += self.y_axis.number_to_point(y)[1]*UP
         return result
 
+    def point_to_coords(self, point):
+        return (self.x_axis.point_to_number(point), 
+                self.y_axis.point_to_number(point))
+
     def get_graph(
         self, func, 
         color = None,
@@ -154,6 +160,7 @@ class GraphScene(Scene):
     def input_to_graph_point(self, x, graph):
         return self.coords_to_point(x, graph.underlying_function(x))
 
+    #tangent 正切
     def angle_of_tangent(self, x, graph, dx = 0.01):
         vect = self.input_to_graph_point(x + dx, graph) - self.input_to_graph_point(x, graph)
         return angle_of_vector(vect)
@@ -195,6 +202,7 @@ class GraphScene(Scene):
         label.shift_onto_screen()
         return label
 
+    #黎曼
     def get_riemann_rectangles(
         self, 
         graph,

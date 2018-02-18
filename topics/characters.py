@@ -1,3 +1,4 @@
+# _*_ coding:utf-8 _*_
 from helpers import *
 
 from mobject import Mobject
@@ -13,24 +14,27 @@ from animation.simple_animations import Write, ShowCreation, AnimationGroup
 from scene import Scene
 
 
-PI_CREATURE_DIR = os.path.join(IMAGE_DIR, "PiCreature")
+PI_CREATURE_DIR = os.path.join(MEDIA_DIR, "designs", "PiCreature")
 PI_CREATURE_SCALE_FACTOR = 0.5
 
 LEFT_EYE_INDEX    = 0
 RIGHT_EYE_INDEX   = 1
+# PUPIL 瞳孔
 LEFT_PUPIL_INDEX  = 2
 RIGHT_PUPIL_INDEX = 3
 BODY_INDEX        = 4
 MOUTH_INDEX       = 5
 
+# characters 人物
 
+# 用来创建需要在视频中进行表现的人物PI
 class PiCreature(SVGMobject):
     CONFIG = {
         "color" : BLUE_E,
         "stroke_width" : 0,
         "stroke_color" : BLACK,
         "fill_opacity" : 1.0,
-        "propogate_style_to_family" : True,
+        "propagate_style_to_family" : True,
         "height" : 3,
         "corner_scale_factor" : 0.75,
         "flip_at_start" : False,
@@ -40,6 +44,7 @@ class PiCreature(SVGMobject):
         "right_arm_range" : [0.55, 0.7],
         "left_arm_range" : [.34, .462],
     }
+    # plain 素的，相貌平平的
     def __init__(self, mode = "plain", **kwargs):
         self.parts_named = False
         try:
@@ -51,7 +56,7 @@ class PiCreature(SVGMobject):
         except:
             warnings.warn("No PiCreature design with mode %s"%mode)
             svg_file = os.path.join(
-                PI_CREATURE_DIR, 
+                FILE_DIR, 
                 "PiCreatures_plain.svg"
             )
             SVGMobject.__init__(self, file_name = svg_file, **kwargs)
@@ -76,6 +81,7 @@ class PiCreature(SVGMobject):
         self.parts_named = True
 
     def init_colors(self):
+        # 对身体各个部分进行上色
         SVGMobject.init_colors(self)
         if not self.parts_named:
             self.name_parts()
@@ -85,6 +91,7 @@ class PiCreature(SVGMobject):
         self.eyes.set_fill(WHITE, opacity = 1)
         return self
 
+    # 拷贝人物对象
     def copy(self):
         copy_mobject = SVGMobject.copy(self)
         copy_mobject.name_parts()
@@ -94,6 +101,7 @@ class PiCreature(SVGMobject):
         self.body.set_fill(color)
         return self
 
+    #一个人物有多种模式
     def change_mode(self, mode):
         new_self = self.__class__(
             mode = mode,
@@ -102,12 +110,15 @@ class PiCreature(SVGMobject):
         new_self.scale_to_fit_height(self.get_height())
         if self.is_flipped() ^ new_self.is_flipped():
             new_self.flip()
+        # 移动眼睛位置
         new_self.shift(self.eyes.get_center() - new_self.eyes.get_center())
         if hasattr(self, "purposeful_looking_direction"):
             new_self.look(self.purposeful_looking_direction)
+        # 这里具体进行更新
         Transform(self, new_self).update(1)
         return self
 
+    # 应该是确定眼睛看的方向
     def look(self, direction):
         norm = np.linalg.norm(direction)
         if norm == 0:
@@ -130,6 +141,7 @@ class PiCreature(SVGMobject):
             #     pupil.shift(top_diff*UP)
         return self
 
+    # 看向什么位置
     def look_at(self, point_or_mobject):
         if isinstance(point_or_mobject, Mobject):
             point = point_or_mobject.get_center()
@@ -138,12 +150,14 @@ class PiCreature(SVGMobject):
         self.look(point - self.eyes.get_center())
         return self
 
+    # 改变函数，涉及新的人物模式和新的观察方向
     def change(self, new_mode, look_at_arg = None):
         self.change_mode(new_mode)
         if look_at_arg is not None:
             self.look_at(look_at_arg)
         return self
 
+    # 使用多个变量来表示方向
     def get_looking_direction(self):
         return np.sign(np.round(
             self.pupils.get_center() - self.eyes.get_center(),
@@ -154,6 +168,7 @@ class PiCreature(SVGMobject):
         return self.eyes.submobjects[0].get_center()[0] > \
                self.eyes.submobjects[1].get_center()[0]
 
+    # blink 眨眼
     def blink(self):
         eye_parts = self.eye_parts
         eye_bottom_y = eye_parts.get_bottom()[1]
@@ -170,6 +185,7 @@ class PiCreature(SVGMobject):
             self.to_corner(DOWN+LEFT, **kwargs)
         return self
 
+    # bubble 水泡和妄想，就是进行思考的时候出现的气泡
     def get_bubble(self, *content, **kwargs):
         bubble_class = kwargs.get("bubble_class", ThoughtBubble)
         bubble = bubble_class(**kwargs)
@@ -178,6 +194,7 @@ class PiCreature(SVGMobject):
                 content_mob = TextMobject(*content)
             else:
                 content_mob = content[0]
+            #向气泡中添加文本信息
             bubble.add_content(content_mob)
             if "height" not in kwargs and "width" not in kwargs:
                 bubble.resize_to_content()
@@ -185,11 +202,13 @@ class PiCreature(SVGMobject):
         self.bubble = bubble
         return bubble
 
+    #contact 接触，就是让两个人物的眼神发生交集
     def make_eye_contact(self, pi_creature):
         self.look_at(pi_creature.eyes)
         pi_creature.look_at(self.eyes)
         return self
 
+    # shrug 耸肩
     def shrug(self):
         self.change_mode("shruggie")
         top_mouth_point, bottom_mouth_point = [
@@ -205,7 +224,8 @@ class PiCreature(SVGMobject):
             body.copy().pointwise_become_partial(body, *alpha_range)
             for alpha_range in self.right_arm_range, self.left_arm_range
         ])
-            
+
+# 获取所有的PI模式
 def get_all_pi_creature_modes():
     result = []
     prefix = "PiCreatures_"
@@ -217,6 +237,7 @@ def get_all_pi_creature_modes():
             )
     return result
 
+# 下面是创建具体的某个名称的人物、有数学家、有孩子
 class Randolph(PiCreature):
     pass #Nothing more than an alternative name
 
@@ -225,7 +246,8 @@ class Mortimer(PiCreature):
         "color" : GREY_BROWN,
         "flip_at_start" : True,
     }
-    
+
+#数学家
 class Mathematician(PiCreature):
     CONFIG = {
         "color" : GREY,
@@ -250,7 +272,7 @@ class BabyPiCreature(PiCreature):
         for pupil in self.pupils:
             pupil.scale_in_place(self.pupil_scale_factor)
         self.look(looking_direction)
-        
+
 class Blink(ApplyMethod):
     CONFIG = {
         "rate_func" : squish_rate_func(there_and_back)
@@ -347,6 +369,7 @@ class PiCreatureBubbleIntroduction(AnimationGroup):
             **kwargs
         )
 
+# 创建在说话的PI
 class PiCreatureSays(PiCreatureBubbleIntroduction):
     CONFIG = {
         "target_mode" : "speaking",
@@ -368,6 +391,7 @@ class RemovePiCreatureBubble(AnimationGroup):
         if self.look_at_arg is not None:
             pi_creature.target.look_at(self.look_at_arg)
 
+        # 移向目标PI，然后淡出气泡和文本
         AnimationGroup.__init__(
             self,
             MoveToTarget(pi_creature),
@@ -382,15 +406,19 @@ class RemovePiCreatureBubble(AnimationGroup):
             surrounding_scene.add(self.pi_creature)
 
 ###########
-
+# Creature 人物
 class PiCreatureScene(Scene):
     CONFIG = {
-        "total_dither_time" : 0,
+        "total_wait_time" : 0,
         "seconds_to_blink" : 3,
         "pi_creatures_start_on_screen" : True,
+        "default_pi_creature_kwargs" : {},
+        "default_pi_creature_class" : Mortimer,
     }
     def setup(self):
-        self.pi_creatures = VGroup(*self.create_pi_creatures())
+        self.pi_creatures = VGroup(
+            *self.create_pi_creatures(**self.default_pi_creature_kwargs)
+        )
         self.pi_creature = self.get_primary_pi_creature()
         if self.pi_creatures_start_on_screen:
             self.add(*self.pi_creatures)
@@ -399,10 +427,10 @@ class PiCreatureScene(Scene):
         """ 
         Likely updated for subclasses 
         """
-        return VGroup(self.create_pi_creature())
+        return VGroup(self.create_pi_creature(**self.default_pi_creature_kwargs))
 
     def create_pi_creature(self):
-        return Mortimer().to_corner(DOWN+RIGHT)
+        return self.default_pi_creature_class(**self.default_pi_creature_kwargs).to_corner(DOWN+RIGHT)
 
     def get_pi_creatures(self):
         return self.pi_creatures
@@ -439,7 +467,9 @@ class PiCreatureScene(Scene):
         added_anims = kwargs.pop("added_anims", [])
 
         anims = []
-        on_screen_mobjects = self.get_mobjects()
+        on_screen_mobjects = self.camera.extract_mobject_family_members(
+            self.get_mobjects()
+        )
         def has_bubble(pi):
             return hasattr(pi, "bubble") and \
                    pi.bubble is not None and \
@@ -474,7 +504,7 @@ class PiCreatureScene(Scene):
         ]
         anims += added_anims
 
-        self.play(*anims)
+        self.play(*anims, **kwargs)
 
     def pi_creature_says(self, *args, **kwargs):
         self.introduce_bubble(
@@ -564,21 +594,21 @@ class PiCreatureScene(Scene):
         ])
         return self
 
-    def dither(self, time = 1, blink = True):
+    def wait(self, time = 1, blink = True):
         while time >= 1:
-            time_to_blink = self.total_dither_time%self.seconds_to_blink == 0
+            time_to_blink = self.total_wait_time%self.seconds_to_blink == 0
             if blink and self.any_pi_creatures_on_screen() and time_to_blink:
                 self.blink()
             else:
-                self.non_blink_dither()
+                self.non_blink_wait()
             time -= 1
-            self.total_dither_time += 1
+            self.total_wait_time += 1
         if time > 0:
-            self.non_blink_dither(time)
+            self.non_blink_wait(time)
         return self
 
-    def non_blink_dither(self, time = 1):
-        Scene.dither(self, time)
+    def non_blink_wait(self, time = 1):
+        Scene.wait(self, time)
         return self
 
     def change_mode(self, mode):
@@ -598,6 +628,7 @@ class TeacherStudentsScene(PiCreatureScene):
         "student_scale_factor" : 0.8,
         "seconds_to_blink" : 2,
     }
+    # 创建一个学生和老师的场景，其中老师在右下方，三个学生在左下方
     def create_pi_creatures(self):
         self.teacher = Mortimer()
         self.teacher.to_corner(DOWN + RIGHT)
@@ -609,7 +640,9 @@ class TeacherStudentsScene(PiCreatureScene):
         self.students.arrange_submobjects(RIGHT)
         self.students.scale(self.student_scale_factor)
         self.students.to_corner(DOWN+LEFT)
+        #老师看着最后一个学生的眼睛
         self.teacher.look_at(self.students[-1].eyes)
+        #每个学生都看着老师的眼睛
         for student in self.students:
             student.look_at(self.teacher.eyes)
 
@@ -625,7 +658,7 @@ class TeacherStudentsScene(PiCreatureScene):
         return self.pi_creature_says(
             self.get_teacher(), *content, **kwargs
         )
-
+    #这个场景学生说话要选择举手的方向
     def student_says(self, *content, **kwargs):
         if "target_mode" not in kwargs:
             target_mode = random.choice([

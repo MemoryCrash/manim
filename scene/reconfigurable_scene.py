@@ -1,3 +1,5 @@
+# _*_ coding:utf-8 _*_
+
 import numpy as np
 
 from scene import Scene
@@ -6,12 +8,14 @@ from mobject import Mobject
 
 from helpers import *
 
+#Reconfigurable 可重构的
 class ReconfigurableScene(Scene):
     CONFIG = {
         "allow_recursion" : True,
     }
     def setup(self):
         self.states = []
+        # recursions 递归
         self.num_recursions = 0
 
     def transition_to_alt_config(
@@ -62,7 +66,7 @@ class ReconfigurableScene(Scene):
 
     def transition_between_states(self, start_state, target_state, **kwargs):
         self.play(Transform(start_state, target_state, **kwargs))
-        self.dither()
+        self.wait()
 
 
 

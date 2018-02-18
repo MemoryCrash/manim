@@ -1,3 +1,5 @@
+# _*_ coding:utf-8 _*_
+
 import numpy as np
 import itertools as it
 import inspect
@@ -7,10 +9,10 @@ import warnings
 from helpers import *
 
 from animation import Animation
-from simple_animations import DelayByOrder
 from mobject import Mobject, Point, VMobject, Group
 from topics.geometry import Dot
 
+# 动画转换
 class Transform(Animation):
     CONFIG = {
         "path_arc" : 0,
@@ -48,9 +50,11 @@ class Transform(Animation):
                 self.path_arc,
                 self.path_arc_axis,
             )
+            
     def get_all_mobjects(self):
         return self.mobject, self.starting_mobject, self.target_mobject
 
+    # 更新子对象从开始对象到结束对象，按照路径函数进行变化
     def update_submobject(self, submob, start, end, alpha):
         submob.interpolate(start, end, alpha, self.path_func)
         return self
@@ -67,12 +71,13 @@ class ReplacementTransform(Transform):
         "replace_mobject_with_target_in_scene" : True,
     }
 
-
+# 顺时针转换
 class ClockwiseTransform(Transform):
     CONFIG = {
         "path_arc" : -np.pi
     }
 
+# 逆时针转换
 class CounterclockwiseTransform(Transform):
     CONFIG = {
         "path_arc" : np.pi
@@ -84,6 +89,7 @@ class MoveToTarget(Transform):
             raise Exception("MoveToTarget called on mobject without attribute 'target' ")
         Transform.__init__(self, mobject, mobject.target, **kwargs)
 
+# 周期替换
 class CyclicReplace(Transform):
     CONFIG = {
         "path_arc" : np.pi/2
@@ -120,6 +126,7 @@ class SpinInFromNothing(GrowFromCenter):
         "path_func" : counterclockwise_path()
     }
 
+# 收缩到中心
 class ShrinkToCenter(Transform):
     def __init__(self, mobject, **kwargs):
         Transform.__init__(
@@ -143,11 +150,18 @@ class ApplyMethod(Transform):
             "the method you want to animate"
         )
         assert(isinstance(method.im_self, Mobject))
-        method_kwargs = kwargs.get("method_kwargs", {})
+        args = list(args) #So that args.pop() works
+        if "method_kwargs" in kwargs:
+            method_kwargs = kwargs["method_kwargs"]
+        elif len(args) > 0 and isinstance(args[-1], dict):
+            method_kwargs = args.pop()
+        else:
+            method_kwargs = {}
         target = method.im_self.copy()
         method.im_func(target, *args, **method_kwargs)
         Transform.__init__(self, method.im_self, target, **kwargs)
 
+# 淡出，从原有对象转换到透明的对象
 class FadeOut(Transform):
     CONFIG = {
         "remover" : True, 
@@ -164,6 +178,7 @@ class FadeOut(Transform):
         Transform.clean_up(self, surrounding_scene)
         self.update(0)
 
+# 淡入 从透明的转换为原始图
 class FadeIn(Transform):
     def __init__(self, mobject, **kwargs):
         target = mobject.copy()
@@ -173,11 +188,7 @@ class FadeIn(Transform):
             self.starting_mobject.set_stroke(width = 0)
             self.starting_mobject.set_fill(opacity = 0)
 
-class ShimmerIn(DelayByOrder):
-    def __init__(self, mobject, **kwargs):
-        mobject.sort_points(lambda p : np.dot(p, DOWN+RIGHT))
-        DelayByOrder.__init__(self, FadeIn(mobject, **kwargs))
-
+# 聚焦从一个比较透明的大圆收缩到一个不怎么透明的小圆
 class FocusOn(Transform):
     CONFIG = {
         "opacity" : 0.2,
@@ -233,6 +244,7 @@ class Rotate(ApplyMethod):
         )
         Transform.__init__(self, mobject, target, **kwargs)
 
+# 对每个点应用函数
 class ApplyPointwiseFunction(ApplyMethod):
     CONFIG = {
         "run_time" : DEFAULT_POINTWISE_FUNCTION_RUN_TIME

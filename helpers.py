@@ -1,3 +1,5 @@
+# _*_ coding:utf-8 _*_
+
 import numpy as np
 import itertools as it
 import operator as op
@@ -15,6 +17,9 @@ from constants import *
 CLOSED_THRESHOLD = 0.01
 STRAIGHT_PATH_THRESHOLD = 0.01
 
+# 定义一些列的帮助函数
+# chord 弦乐
+# 这里构造的是在ubuntu下的一个命令用来播放声音
 def play_chord(*nums):
     commands = [
         "play",
@@ -34,20 +39,24 @@ def play_chord(*nums):
     except:
         pass
 
+# 播放失败的声音
 def play_error_sound():
     play_chord(11, 8, 6, 1)
 
+# 播放结束的声音
 def play_finish_sound():
     play_chord(12, 9, 5, 2)
 
+# smooth spline 平滑逼近
 def get_smooth_handle_points(points):
     points = np.array(points)
     num_handles = len(points) - 1
+    # 获取返回的shape元组中第二个元素
     dim = points.shape[1]    
     if num_handles < 1:
         return np.zeros((0, dim)), np.zeros((0, dim))
     #Must solve 2*num_handles equations to get the handles.
-    #l and u are the number of lower an upper diagonal rows
+    #l and u are the number of lower an upper diagonal(对角) rows
     #in the matrix to solve.
     l, u = 2, 1    
     #diag is a representation of the matrix in diagonal form
@@ -105,39 +114,53 @@ def diag_to_matrix(l_and_u, diag):
         )
     return matrix
 
+# 对第一个点和最后一个点的差求二范数,然后和阈值进行判断
 def is_closed(points):
     return np.linalg.norm(points[0] - points[-1]) < CLOSED_THRESHOLD
 
 ## Color
-
+# 将颜色从constants文件中的"#236B8E"形式转化为rgb格式
 def color_to_rgb(color):
     return np.array(Color(color).get_rgb())
 
+#rgba其中a这个参数表示alpha 透明度，默认是1就是不透明
 def color_to_rgba(color, alpha = 1):
     return np.append(color_to_rgb(color), [alpha])
 
+#将rgb转化为颜色对象
 def rgb_to_color(rgb):
     try:
         return Color(rgb = rgb)
     except:
         return Color(WHITE)
 
+#将rgba转化为颜色对象，不使用透明度参数
 def rgba_to_color(rgba):
     return rgb_to_color(rgba[:3])
 
+#转为16进制
+def rgb_to_hex(rgb):
+    return Color(rgb = rgb).get_hex_l()
+
+#翻转颜色
 def invert_color(color):
     return rgb_to_color(1.0 - color_to_rgb(color))
 
+#将颜色转化为以255来计算的整型数据
 def color_to_int_rgb(color):
     return (255*color_to_rgb(color)).astype('uint8')
 
+#将rgba颜色转化以255计算的整数型数据
 def color_to_int_rgba(color, alpha = 255):
     return np.append(color_to_int_rgb(color), alpha)
 
+#制作颜色梯度，输入的reference_colors的颜色包含来起始颜色和结束颜色
 def color_gradient(reference_colors, length_of_output):
     if length_of_output == 0:
         return reference_colors[0]
+    # 转化为rgb表示的颜色
     rgbs = map(color_to_rgb, reference_colors)
+    # 设置梯度
     alphas = np.linspace(0, (len(rgbs) - 1), length_of_output)
     floors = alphas.astype('int')
     alphas_mod1 = alphas % 1
@@ -149,12 +172,15 @@ def color_gradient(reference_colors, length_of_output):
         for i, alpha in zip(floors, alphas_mod1)
     ]
 
+# 插入颜色，返回在两个颜色之间的颜色
 def interpolate_color(color1, color2, alpha):
     rgb = interpolate(color_to_rgb(color1), color_to_rgb(color2), alpha)
     return rgb_to_color(rgb)
 
 def average_color(*colors):
     rgbs = np.array(map(color_to_rgb, colors))
+    #numpy.apply_along_axis(func, axis, arr, *args, **kwargs)
+    #func 应用函数，axis轴 ，arr被应用的函数
     mean_rgb = np.apply_along_axis(np.mean, 0, rgbs)
     return rgb_to_color(mean_rgb)
 
@@ -163,14 +189,18 @@ def average_color(*colors):
 def compass_directions(n = 4, start_vect = RIGHT):
     angle = 2*np.pi/n
     return np.array([
+        # 旋转向量
         rotate_vector(start_vect, k*angle)
         for k in range(n)
     ])
 
+#bezier curve贝塞尔曲线，这个曲线是用来在计算机上绘制曲线
+#的基础。
+
 def partial_bezier_points(points, a, b):
     """
     Given an array of points which define 
-    a bezier curve, and two numbres 0<=a<b<=1,
+    a bezier curve, and two numbers 0<=a<b<=1,
     return an array of the same size, which 
     describes the portion of the original bezier
     curve on the interval [a, b].
@@ -182,7 +212,7 @@ def partial_bezier_points(points, a, b):
         for i in range(len(points))
     ])
     return np.array([
-        bezier(a_to_1[:i+1])(b)
+        bezier(a_to_1[:i+1])((b-a)/(1.-a))
         for i in range(len(points))
     ])
 
@@ -193,6 +223,7 @@ def bezier(points):
         for k, point in enumerate(points)
     ])
 
+# 通过set只能放置唯一的元素的特点，对list进行去重
 def remove_list_redundancies(l):
     """
     Used instead of list(set(l)) to maintain order
@@ -205,6 +236,7 @@ def remove_list_redundancies(l):
             used.add(x)
     return result
 
+# 将被更新对象l1中和l2重复的部分剔除，然后将l2加在l1中
 def list_update(l1, l2):
     """
     Used instead of list(set(l1).update(l2)) to maintain order,
@@ -212,18 +244,27 @@ def list_update(l1, l2):
     """
     return filter(lambda e : e not in l2, l1) + list(l2)
 
+#将不在l2中的l1元素过滤出来
 def list_difference_update(l1, l2):
     return filter(lambda e : e not in l2, l1)
 
+#检查是否所有的对象都属于某个类
 def all_elements_are_instances(iterable, Class):
     return all(map(lambda e : isinstance(e, Class), iterable))
 
+#将一个对象和他相邻的对象成对的返回
 def adjacent_pairs(objects):
     return zip(objects, list(objects[1:])+[objects[0]])
 
+#将复数的实数部分和虚数部分分别保存numpy的array中
 def complex_to_R3(complex_num):
     return np.array((complex_num.real, complex_num.imag, 0))
 
+#将点转化为复数
+def R3_to_complex(point):
+    return complex(*point[:2])
+
+# 元组化
 def tuplify(obj):
     if isinstance(obj, str):
         return (obj,)
@@ -240,6 +281,8 @@ def instantiate(obj):
     """
     return obj() if isinstance(obj, type) else obj
 
+# descendent 后裔，派生类
+# 循环的获取所有的派生类
 def get_all_descendent_classes(Class):
     awaiting_review = [Class]
     result = []
@@ -249,14 +292,16 @@ def get_all_descendent_classes(Class):
         result.append(Child)
     return result
 
-def filtered_locals(local_args):
-    result = local_args.copy()
+# 过滤 self 和 kwargs 参数
+def filtered_locals(caller_locals):
+    result = caller_locals.copy()
     ignored_local_args = ["self", "kwargs"]
     for arg in ignored_local_args:
-        result.pop(arg, local_args)
+        result.pop(arg, caller_locals)
     return result
 
-def digest_config(obj, kwargs, local_args = {}):
+# 将CONFIG中的信息转到类中成为成员变量
+def digest_config(obj, kwargs, caller_locals = {}):
     """
     Sets init args and CONFIG values as local variables
 
@@ -265,20 +310,28 @@ def digest_config(obj, kwargs, local_args = {}):
     be easily passed into instantiation, and is attached
     as an attribute of the object.
     """
-    ### Assemble list of CONFIGs from all super classes
+
+    # Assemble list of CONFIGs from all super classes
     classes_in_hierarchy = [obj.__class__]
-    configs = []
+    static_configs = []
+    # 将该类以及其父类中所有的CONFIG都放置到统一的位置
     while len(classes_in_hierarchy) > 0:
         Class = classes_in_hierarchy.pop()
         classes_in_hierarchy += Class.__bases__
         if hasattr(Class, "CONFIG"):
-            configs.append(Class.CONFIG)    
+            static_configs.append(Class.CONFIG)
 
     #Order matters a lot here, first dicts have higher priority
-    all_dicts = [kwargs, filtered_locals(local_args), obj.__dict__]
-    all_dicts += configs
+    caller_locals = filtered_locals(caller_locals)
+    all_dicts = [kwargs, caller_locals, obj.__dict__]
+    all_dicts += static_configs
+    all_new_dicts = [kwargs, caller_locals] + static_configs
     obj.__dict__ = merge_config(all_dicts)
+    #Keep track of the configuration of objects upon 
+    #instantiation
+    obj.initial_config = merge_config(all_new_dicts)
 
+# 合并配置
 def merge_config(all_dicts):
     all_config = reduce(op.add, [d.items() for d in all_dicts])
     config = dict()
@@ -292,6 +345,15 @@ def merge_config(all_dicts):
                 config[key] = merge_config([config[key], value])
     return config
 
+def soft_dict_update(d1, d2):
+    """
+    Adds key values pairs of d2 to d1 only when d1 doesn't
+    already have that key
+    """
+    for key, value in d2.items():
+        if key not in d1:
+            d1[key] = value
+# 消化本地变量
 def digest_locals(obj, keys = None):
     caller_locals = filtered_locals(
         inspect.currentframe().f_back.f_locals
@@ -301,13 +363,33 @@ def digest_locals(obj, keys = None):
     for key in keys:
         setattr(obj, key, caller_locals[key])
 
+# 插入
 def interpolate(start, end, alpha):
     return (1-alpha)*start + alpha*end
 
+# 中间值
+def mid(start, end):
+    return (start + end)/2.0
+
+# 反插入 np.true_divide 真除法，返回的是浮点数
+# 返回用于插入时的alpha值
+def inverse_interpolate(start, end, value):
+    return np.true_divide(value - start, end - start)
+
+# 设置val的最大最小阈值
+def clamp(lower, upper, val):
+    if val < lower:
+        return lower
+    elif val > upper:
+        return upper
+    return val
+
+#将点转化为浮点型，并计算点的平均值
 def center_of_mass(points):
     points = [np.array(point).astype("float") for point in points]
     return sum(points) / len(points)
 
+#以r来划分n，将1到r的乘作为分母，r到n作为分子，将他们的商返回。
 def choose(n, r):
     if n < r: return 0
     if r == 0: return 1
@@ -315,6 +397,7 @@ def choose(n, r):
     numer = reduce(op.mul, xrange(n, n-r, -1), 1)
     return numer//denom
 
+#判断p0是否在p1和p2所在的直线上
 def is_on_line(p0, p1, p2, threshold = 0.01):
     """
     Returns true of p0 is on the line between p1 and p2
@@ -324,7 +407,7 @@ def is_on_line(p0, p1, p2, threshold = 0.01):
     p2 -= p0
     return abs((p1[0] / p1[1]) - (p2[0] / p2[1])) < threshold
 
-
+# 交点
 def intersection(line1, line2):
     """
     A "line" should come in the form [(x0, y0), (x1, y1)] for two
@@ -346,6 +429,7 @@ def intersection(line1, line2):
     result = result.reshape((2,)) + p0
     return result
 
+#随机产生一个比较亮的颜色
 def random_bright_color():
     color = random_color()
     curr_rgb = color_to_rgb(color)
@@ -354,19 +438,21 @@ def random_bright_color():
     )
     return Color(rgb = new_rgb)
 
+# 随机选择一个颜色 random 的 choice
 def random_color():
     return random.choice(PALETTE)
 
 
 ################################################
-
+#直线路径
 def straight_path(start_points, end_points, alpha):
     return interpolate(start_points, end_points, alpha)
 
+#弧形路径
 def path_along_arc(arc_angle, axis = OUT):
     """
     If vect is vector from start to end, [vect[:,1], -vect[:,0]] is 
-    perpendicualr to vect in the left direction.
+    perpendicular to vect in the left direction.
     """
     if abs(arc_angle) < STRAIGHT_PATH_THRESHOLD:
         return straight_path
@@ -382,9 +468,11 @@ def path_along_arc(arc_angle, axis = OUT):
         return centers + np.dot(start_points-centers, rot_matrix.T)
     return path
 
+#顺时针路径
 def clockwise_path():
     return path_along_arc(-np.pi)
 
+#逆时针路径
 def counterclockwise_path():
     return path_along_arc(np.pi)
 
@@ -405,18 +493,18 @@ def initials(name, sep_values = [" ", "_"]):
         for s in re.split("|".join(sep_values), name)
     ])
 
-def cammel_case_initials(name):
+def camel_case_initials(name):
     return filter(lambda c : c.isupper(), name)
 
 ################################################
 
-def get_full_image_path(image_file_name):
+def get_full_raster_image_path(image_file_name):
     possible_paths = [
         image_file_name,
-        os.path.join(IMAGE_DIR, image_file_name),
-        os.path.join(IMAGE_DIR, image_file_name + ".jpg"),
-        os.path.join(IMAGE_DIR, image_file_name + ".png"),
-        os.path.join(IMAGE_DIR, image_file_name + ".gif"),
+        os.path.join(RASTER_IMAGE_DIR, image_file_name),
+        os.path.join(RASTER_IMAGE_DIR, image_file_name + ".jpg"),
+        os.path.join(RASTER_IMAGE_DIR, image_file_name + ".png"),
+        os.path.join(RASTER_IMAGE_DIR, image_file_name + ".gif"),
     ]
     for path in possible_paths:
         if os.path.exists(path):
@@ -431,6 +519,7 @@ def drag_pixels(frames):
         new_frames.append(np.array(curr))
     return new_frames
 
+#翻转图片
 def invert_image(image):
     arr = np.array(image)
     arr = (255 * np.ones(arr.shape)).astype(arr.dtype) - arr
@@ -444,6 +533,7 @@ def stretch_array_to_length(nparray, length):
     indices *= curr_len
     return nparray[indices.astype('int')]
 
+#
 def make_even(iterable_1, iterable_2):
     list_1, list_2 = list(iterable_1), list(iterable_2)
     length = max(len(list_1), len(list_2))
@@ -518,6 +608,13 @@ def squish_rate_func(func, a = 0.4, b = 0.6):
             return func((t-a)/(b-a))
     return result
 
+# Stylistically, should this take parameters (with default values)?
+# Ultimately, the functionality is entirely subsumed by squish_rate_func,
+# but it may be useful to have a nice name for with nice default params for 
+# "lingering", different from squish_rate_func's default params
+def lingering(t):
+    return squish_rate_func(lambda t: t, 0, 0.8)(t)
+
 ### Functional Functions ###
 
 def composition(func_list):
@@ -538,13 +635,15 @@ def thick_diagonal(dim, thickness = 2):
     row_indices = np.arange(dim).repeat(dim).reshape((dim, dim))
     col_indices = np.transpose(row_indices)
     return (np.abs(row_indices - col_indices)<thickness).astype('uint8')
-
+# 查看矩阵的旋转可以看看这个博客
+#http://blog.csdn.net/csxiaoshui/article/details/65446125
 def rotation_matrix(angle, axis):
     """
-    Rotation in R^3 about a specified axess of rotation.
+    Rotation in R^3 about a specified axis of rotation.
     """
     about_z = rotation_about_z(angle)
     z_to_axis = z_to_vector(axis)
+    # 矩阵求逆np.linalg.inv
     axis_to_z = np.linalg.inv(z_to_axis)
     return reduce(np.dot, [z_to_axis, about_z, axis_to_z])
 
@@ -593,11 +692,22 @@ def angle_of_vector(vector):
     """
     Returns polar coordinate theta when vector is project on xy plane
     """
+    # complex 复数 选择前两个数字进行复数计算如果是0则直接返回0
+    # 否则将数值转换为角度
     z = complex(*vector[:2])
     if z == 0:
         return 0
     return np.angle(complex(*vector[:2]))
 
+def concatenate_lists(*list_of_lists):
+    return [item for l in list_of_lists for item in l]
 
+# Occasionally convenient in order to write dict.x instead of more laborious 
+# (and less in keeping with all other attr accesses) dict["x"]
+class DictAsObject(object):
+    def __init__(self, dict):
+         self.__dict__ = dict
 
-
+# Just to have a less heavyweight name for this extremely common operation
+def fdiv(a, b):
+    return np.true_divide(a,b)

@@ -1,9 +1,12 @@
+# _*_ coding:utf-8 _*_
 import re
 
-from .mobject import Mobject
+from mobject import Mobject
 
 from helpers import *
 
+# 向量化对象
+# stroke color 绘笔颜色
 class VMobject(Mobject):
     CONFIG = {
         "fill_color"       : None,
@@ -14,9 +17,13 @@ class VMobject(Mobject):
         "is_subpath"       : False,
         "close_new_points" : False,
         "mark_paths_closed" : False,
-        "considered_smooth" : True,
-        "propogate_style_to_family" : False,
+        "propagate_style_to_family" : False,
+        "pre_function_handle_to_anchor_scale_factor" : 0.01,
+        "make_smooth_after_applying_functions" : False,
     }
+
+    def get_group_class(self):
+        return VGroup
 
     ## Colors
     def init_colors(self):
@@ -25,14 +32,17 @@ class VMobject(Mobject):
            stroke_width = self.stroke_width,
            fill_color = self.fill_color or self.color, 
            fill_opacity = self.fill_opacity,
-           family = self.propogate_style_to_family
+            # propagate 扩散样式到家族
+           family = self.propagate_style_to_family
         )
         return self
 
+    # 设置家族对象属性值
     def set_family_attr(self, attr, value):
         for mob in self.submobject_family():
             setattr(mob, attr, value)
 
+    # 设置样式
     def set_style_data(self, 
                        stroke_color = None, 
                        stroke_width = None,
@@ -83,6 +93,27 @@ class VMobject(Mobject):
         )
         return self
 
+    # 匹配样式
+    def match_style(self, vmobject):
+        self.set_style_data(
+            stroke_color = vmobject.get_stroke_color(),
+            stroke_width = vmobject.get_stroke_width(),
+            fill_color = vmobject.get_fill_color(),
+            fill_opacity = vmobject.get_fill_opacity(),
+            family = False
+        )
+
+        #Does its best to match up submobject lists, and 
+        #match styles accordingly
+        submobs1, submobs2 = self.submobjects, vmobject.submobjects
+        if len(submobs1) == 0:
+            return self
+        elif len(submobs2) == 0:
+            submobs2 = [vmobject]
+        for sm1, sm2 in zip(*make_even(submobs1, submobs2)):
+            sm1.match_style(sm2)
+        return self
+
     def fade(self, darkness = 0.5):
         for submob in self.submobject_family():
             submob.set_stroke(
@@ -90,7 +121,7 @@ class VMobject(Mobject):
                 family = False
             )
             submob.set_fill(
-                opacity = (1-darkness),
+                opacity = (1-darkness)*submob.get_fill_opacity(),
                 family = False
             )
         return self
@@ -191,7 +222,6 @@ class VMobject(Mobject):
         return self
 
     def make_smooth(self):
-        self.considered_smooth = True
         return self.change_anchor_mode("smooth")
 
     def make_jagged(self):
@@ -199,9 +229,9 @@ class VMobject(Mobject):
 
     def add_subpath(self, points):
         """
-        A VMobject is meant to represnt
+        A VMobject is meant to represent
         a single "path", in the svg sense of the word.
-        However, one such path may really consit of separate
+        However, one such path may really consist of separate
         continuous components if there is a move_to command.
 
         These other portions of the path will be treated as submobjects,
@@ -232,12 +262,35 @@ class VMobject(Mobject):
             self.submobjects
         )
 
-    def apply_function(self, function, maintain_smoothness = False):
+    def apply_function(self, function):
+        factor = self.pre_function_handle_to_anchor_scale_factor
+        self.scale_handle_to_anchor_distances(factor)
         Mobject.apply_function(self, function)
-        if maintain_smoothness and self.considered_smooth:
+        self.scale_handle_to_anchor_distances(1./factor)
+        if self.make_smooth_after_applying_functions:
             self.make_smooth()
         return self
 
+    def scale_handle_to_anchor_distances(self, factor):
+        """
+        If the distance between a given handle point H and its associated
+        anchor point A is d, then it changes H to be a distances factor*d
+        away from A, but so that the line from A to H doesn't change.
+
+        This is mostly useful in the context of applying a (differentiable) 
+        function, to preserve tangency properties.  One would pull all the 
+        handles closer to their anchors, apply the function then push them out
+        again.
+        """
+        if self.get_num_points() == 0:
+            return
+        anchors, handles1, handles2 = self.get_anchors_and_handles()
+        # print len(anchors), len(handles1), len(handles2)
+        a_to_h1 = handles1 - anchors[:-1]
+        a_to_h2 = handles2 - anchors[1:]
+        handles1 = anchors[:-1] + factor*a_to_h1
+        handles2 = anchors[1:] + factor*a_to_h2
+        self.set_anchors_and_handles(anchors, handles1, handles2)
 
     ## Information about line
 
@@ -264,6 +317,7 @@ class VMobject(Mobject):
             for i in range(3)
         ]
 
+    # 每隔三个位置获取一个点
     def get_anchors(self):
         return self.points[::3]
 
@@ -271,8 +325,7 @@ class VMobject(Mobject):
         return self.get_anchors()
 
         
-    ## Alignment
-
+    ## Alignment    
     def align_points(self, mobject):
         Mobject.align_points(self, mobject)
         is_subpath = self.is_subpath or mobject.is_subpath
@@ -280,7 +333,7 @@ class VMobject(Mobject):
         mark_closed = self.mark_paths_closed and mobject.mark_paths_closed
         self.mark_paths_closed = mobject.mark_paths_closed = mark_closed
         return self
-
+    
     def align_points_with_larger(self, larger_mobject):
         assert(isinstance(larger_mobject, VMobject))
         self.insert_n_anchor_points(
@@ -288,7 +341,7 @@ class VMobject(Mobject):
             self.get_num_anchor_points()
         )
         return self
-
+    
     def insert_n_anchor_points(self, n):
         curr = self.get_num_anchor_points()
         if curr == 0:
@@ -308,7 +361,8 @@ class VMobject(Mobject):
         for index in range(num_curves):
             curr_bezier_points = self.points[3*index:3*index+4]
             num_inter_curves = sum(index_allocation == index)
-            alphas = np.arange(0, num_inter_curves+1)/float(num_inter_curves)
+            alphas = np.linspace(0, 1, num_inter_curves+1)
+            # alphas = np.arange(0, num_inter_curves+1)/float(num_inter_curves)
             for a, b in zip(alphas, alphas[1:]):
                 new_points = partial_bezier_points(
                     curr_bezier_points, a, b
@@ -318,17 +372,17 @@ class VMobject(Mobject):
                 )
         self.set_points(points)
         return self
-
+    
     def get_point_mobject(self, center = None):
         if center is None:
             center = self.get_center()
         return VectorizedPoint(center)
-
+    
     def repeat_submobject(self, submobject):
         if submobject.is_subpath:
             return VectorizedPoint(submobject.points[0])
         return submobject.copy()
-
+    
     def interpolate_color(self, mobject1, mobject2, alpha):
         attrs = [
             "stroke_rgb", 
@@ -345,13 +399,13 @@ class VMobject(Mobject):
             if alpha == 1.0:
                 # print getattr(mobject2, attr)
                 setattr(self, attr, getattr(mobject2, attr))
-
+    
     def pointwise_become_partial(self, mobject, a, b):
         assert(isinstance(mobject, VMobject))
         #Partial curve includes three portions:
-        #-A middle section, which matches the curve exactly
-        #-A start, which is some ending portion of an inner cubic
-        #-An end, which is the starting portion of a later inner cubic
+        #- A middle section, which matches the curve exactly
+        #- A start, which is some ending portion of an inner cubic
+        #- An end, which is the starting portion of a later inner cubic
         if a <= 0 and b >= 1:
             self.set_points(mobject.points)
             self.mark_paths_closed = mobject.mark_paths_closed
@@ -368,6 +422,9 @@ class VMobject(Mobject):
             b_residue = (num_cubics*b)%1
             if b == 1:
                 b_residue = 1
+            elif lower_index == upper_index:
+                b_residue = (b_residue - a_residue)/(1-a_residue)
+
             points[:4] = partial_bezier_points(
                 points[:4], a_residue, 1
             )
@@ -378,8 +435,17 @@ class VMobject(Mobject):
         return self
 
 class VGroup(VMobject):
-    #Alternate name to improve readability during use
-    pass 
+    def __init__(self, *args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], (tuple, list)):
+            args = args[0]
+
+        packed_args = []
+        for arg in args:
+            if isinstance(arg, (tuple, list)):
+                packed_args.append(VGroup(arg))
+            else: packed_args.append(arg)
+
+        VMobject.__init__(self, *packed_args, **kwargs)
 
 class VectorizedPoint(VMobject):
     CONFIG = {
@@ -398,6 +464,39 @@ class VectorizedPoint(VMobject):
 
     def get_height(self):
         return self.artificial_height
+
+class BackgroundColoredVMobject(VMobject):
+    CONFIG = {
+        "background_image" : "color_background",
+        "stroke_color" : WHITE,
+        "fill_color" : WHITE,
+    }
+    def __init__(self, vmobject, **kwargs):
+        # Note: At the moment, this does nothing to mimic
+        # the full family of the vmobject passed in.
+        VMobject.__init__(self, **kwargs)
+
+        #Match properties of vmobject
+        self.points = np.array(vmobject.points)
+        self.set_stroke(WHITE, vmobject.get_stroke_width())
+        self.set_fill(WHITE, vmobject.get_fill_opacity())
+        for submob in vmobject.submobjects:
+            self.add(BackgroundColoredVMobject(submob, **kwargs))
+
+        #Initialize background array
+        path = get_full_raster_image_path(self.background_image)
+        image = Image.open(path)
+        self.background_array = np.array(image)
+
+    def resize_background_array(self, new_width, new_height, mode = "RGBA"):
+        image = Image.fromarray(self.background_array, mode = mode)
+        resized_image = image.resize((new_width, new_height))
+        self.background_array = np.array(resized_image)
+
+    def resize_background_array_to_match(self, pixel_array):
+        height, width = pixel_array.shape[:2]
+        mode = "RGBA" if pixel_array.shape[2] == 4 else "RGB"
+        self.resize_background_array(width, height, mode)
 
 
 

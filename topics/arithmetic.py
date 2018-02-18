@@ -1,3 +1,5 @@
+# _*_ coding:utf-8 _*_
+
 import numpy as np
 import itertools as it
 
@@ -6,6 +8,8 @@ from scene import Scene
 from animation import Animation
 from mobject.tex_mobject import TexMobject
 
+# arithmetic 算术、计算
+# rearrange 重新安排
 class RearrangeEquation(Scene):
     def construct(
         self, 
@@ -50,12 +54,12 @@ class RearrangeEquation(Scene):
         self.add(*start_mobs)
         if leave_start_terms:
             self.add(Mobject(*start_mobs))
-        self.dither()
+        self.wait()
         self.play(*[
             Transform(*pair, **transform_kwargs)
             for pair in mobject_pairs
         ])
-        self.dither()
+        self.wait()
 
 
     def get_mobs_from_terms(self, start_terms, end_terms):

@@ -1,3 +1,5 @@
+# _*_ coding:utf-8 _*_
+
 import numpy as np
 import operator as op
 import os
@@ -7,22 +9,23 @@ from colour import Color
 
 from helpers import *
 
+from container import *
 
 #TODO: Explain array_attrs
 
-class Mobject(object):
+class Mobject(Container):
     """
     Mathematical Object
     """
     CONFIG = {
-        "color"        : WHITE,
+        "color" : WHITE,
         "stroke_width" : DEFAULT_POINT_THICKNESS,
-        "name"         : None,
-        "dim"          : 3,
-        "target"       : None,
+        "name" : None,
+        "dim" : 3,
+        "target" : None,
     }
     def __init__(self, *submobjects, **kwargs):
-        digest_config(self, kwargs)
+        Container.__init__(self, *submobjects, **kwargs)
         if not all(map(lambda m : isinstance(m, Mobject), submobjects)):
             raise Exception("All submobjects must be of type Mobject")
         self.submobjects = list(submobjects)
@@ -47,17 +50,20 @@ class Mobject(object):
         #Typically implemented in subclass, unless purposefully left blank
         pass
 
+    # 在子对象集合中更新对象
     def add(self, *mobjects):
         if self in mobjects:
             raise Exception("Mobject cannot contain self")
         self.submobjects = list_update(self.submobjects, mobjects)
         return self
 
+    #在子对象集合中添加对象
     def add_to_back(self, *mobjects):
         self.remove(*mobjects)
         self.submobjects = list(mobjects) + self.submobjects
         return self
 
+    #将在子对象中存在的对象移除
     def remove(self, *mobjects):
         for mobject in mobjects:
             if mobject in self.submobjects:
@@ -96,7 +102,7 @@ class Mobject(object):
 
     def save_image(self, name = None):
         self.get_image().save(
-            os.path.join(MOVIE_DIR, (name or str(self)) + ".png")
+            os.path.join(ANIMATIONS_DIR, (name or str(self)) + ".png")
         )
 
     def copy(self):
@@ -138,49 +144,77 @@ class Mobject(object):
            mob.points += total_vector
         return self
 
-    def scale(self, scale_factor, about_point = None):
-        if about_point is not None:
-            self.shift(-about_point)
-        for mob in self.family_members_with_points():
-            mob.points *= scale_factor
-        if about_point is not None:
-            self.shift(about_point)
+    def scale(self, scale_factor, **kwargs):
+        """
+        Default behavior is to scale about the center of the mobject.
+        The argument about_edge can be a vector, indicating which side of
+        the mobject to scale about, e.g., mob.scale(about_edge = RIGHT) 
+        scales about mob.get_right().
+
+        Otherwise, if about_point is given a value, scaling is done with
+        respect to that point.
+        """
+        self.apply_points_function_about_point(
+            lambda points : scale_factor*points, **kwargs
+        )
         return self
 
     def rotate_about_origin(self, angle, axis = OUT, axes = []):
-        if len(axes) == 0:
-            axes = [axis]
-        rot_matrix = np.identity(self.dim)
-        for axis in axes:
-            rot_matrix = np.dot(rot_matrix, rotation_matrix(angle, axis))
-        t_rot_matrix = np.transpose(rot_matrix)
-        for mob in self.family_members_with_points():
-            mob.points = np.dot(mob.points, t_rot_matrix)
+        return self.rotate(angle, axis, about_point = ORIGIN)
+
+    def rotate(self, angle, axis = OUT, **kwargs):
+        rot_matrix = rotation_matrix(angle, axis)
+        self.apply_points_function_about_point(
+            lambda points : np.dot(points, rot_matrix.T),
+            **kwargs
+        )
         return self
 
-    def rotate(self, angle, axis = OUT, axes = [], about_point = None):
-        if about_point is None:
-            self.rotate_about_origin(angle, axis, axes)
-        else:
-            self.do_about_point(about_point, self.rotate, angle, axis, axes)
+    #flip 轻弹
+    def flip(self, axis = UP, **kwargs):
+        return self.rotate(TAU/2, axis, **kwargs)
+
+    #stretch 伸展、factor 因子
+    def stretch(self, factor, dim, **kwargs):
+        def func(points):
+            points[:,dim] *= factor
+            return points
+        self.apply_points_function_about_point(func, **kwargs)
         return self
 
-    def stretch(self, factor, dim):
-        for mob in self.family_members_with_points():
-            mob.points[:,dim] *= factor
+    #应用函数
+    def apply_function(self, function, **kwargs):
+        #Default to applying matrix about the origin, not mobjects center
+        if len(kwargs) == 0:
+            kwargs["about_point"] = ORIGIN
+        self.apply_points_function_about_point(
+            lambda points : np.apply_along_axis(function, 1, points),
+            **kwargs
+        )
         return self
 
-    def apply_function(self, function):
-        for mob in self.family_members_with_points():
-            mob.points = np.apply_along_axis(function, 1, mob.points)
-        return self
-
-    def apply_matrix(self, matrix):
+    #应用矩阵
+    def apply_matrix(self, matrix, **kwargs):
+        #Default to applying matrix about the origin, not mobjects center
+        if len(kwargs) == 0:
+            kwargs["about_point"] = ORIGIN
+        full_matrix = np.identity(self.dim)
         matrix = np.array(matrix)
-        for mob in self.family_members_with_points():
-            mob.points = np.dot(mob.points, matrix.T)
+        full_matrix[:matrix.shape[0],:matrix.shape[1]] = matrix
+        self.apply_points_function_about_point(
+            lambda points : np.dot(points, full_matrix.T),
+            **kwargs
+        )
         return self
 
+    #应用一个复数函数
+    def apply_complex_function(self, function, **kwargs):
+        return self.apply_function(
+            lambda (x, y, z) : complex_to_R3(function(complex(x, y))),
+            **kwargs
+        )
+
+    # wag 摇动
     def wag(self, direction = RIGHT, axis = DOWN, wag_factor = 1.0):
         for mob in self.family_members_with_points():
             alphas = np.dot(mob.points, np.transpose(axis))
@@ -193,6 +227,7 @@ class Mobject(object):
             )
         return self
 
+    # 翻转点
     def reverse_points(self):
         for mob in self.family_members_with_points():
             mob.apply_over_attr_arrays(
@@ -213,47 +248,49 @@ class Mobject(object):
             mob.apply_over_attr_arrays(repeat_array)
         return self
 
+    #redundant 多余的
     #### In place operations ######
+    #Note, much of these are now redundant with default behavior of
+    #above methods
 
-    def do_about_point(self, point, method, *args, **kwargs):
-        self.shift(-point)
-        method(*args, **kwargs)
-        self.shift(point)
+    def apply_points_function_about_point(self, func, about_point = None, about_edge = ORIGIN):
+        if about_point is None:
+            about_point = self.get_critical_point(about_edge)
+        for mob in self.family_members_with_points():
+            mob.points -= about_point
+            mob.points = func(mob.points)
+            mob.points += about_point
         return self
 
-    def do_in_place(self, method, *args, **kwargs):
-        self.do_about_point(self.get_center(), method, *args, **kwargs)
-        return self
+    def rotate_in_place(self, angle, axis = OUT):
+        # redundant with default behavior of rotate now.
+        return self.rotate(angle, axis = axis)
 
-    def rotate_in_place(self, angle, axis = OUT, axes = []):
-        self.do_in_place(self.rotate, angle, axis, axes)
-        return self
-
-    def flip(self, axis = UP):
-        self.rotate_in_place(np.pi, axis)
-        return self
-
-    def scale_in_place(self, scale_factor):
-        self.do_in_place(self.scale, scale_factor)
-        return self
+    def scale_in_place(self, scale_factor, **kwargs):
+        #Redundant with default behavior of scale now.
+        return self.scale(scale_factor, **kwargs)
 
     def scale_about_point(self, scale_factor, point):
-        self.do_about_point(point, self.scale, scale_factor)
+        #Redundant with default behavior of scale now.
+        return self.scale(scale_factor, about_point = point)
+
+    def pose_at_angle(self, **kwargs):
+        self.rotate(TAU/14, RIGHT+UP, **kwargs)
         return self
 
-    def pose_at_angle(self):
-        self.rotate_in_place(np.pi / 7, RIGHT+UP)
-        return self
+    #### Positioning methods ####
 
     def center(self):
         self.shift(-self.get_center())
         return self
 
+    # 对齐边界
     def align_on_border(self, direction, buff = DEFAULT_MOBJECT_TO_EDGE_BUFFER):
         """
         Direction just needs to be a vector pointing towards side or
         corner in the 2d plane.
         """
+        # np.sign(x)返回数组中元素的正负符号，使用-1和+1进行表示
         target_point = np.sign(direction) * (SPACE_WIDTH, SPACE_HEIGHT, 0)
         point_to_align = self.get_critical_point(direction)
         shift_val = target_point - point_to_align - buff * np.array(direction)
@@ -261,9 +298,11 @@ class Mobject(object):
         self.shift(shift_val)
         return self
 
+    # 到边边角角
     def to_corner(self, corner = LEFT+DOWN, buff = DEFAULT_MOBJECT_TO_EDGE_BUFFER):
         return self.align_on_border(corner, buff)
 
+    # 到边界
     def to_edge(self, edge = LEFT, buff = DEFAULT_MOBJECT_TO_EDGE_BUFFER):
         return self.align_on_border(edge, buff)
 
@@ -271,31 +310,54 @@ class Mobject(object):
                 direction = RIGHT,
                 buff = DEFAULT_MOBJECT_TO_MOBJECT_BUFFER,
                 aligned_edge = ORIGIN,
-                align_using_submobjects = False,
+                submobject_to_align = None,
+                index_of_submobject_to_align = None,
                 ):
         if isinstance(mobject_or_point, Mobject):
             mob = mobject_or_point
-            target_point = mob.get_critical_point(
-                aligned_edge+direction,
-                use_submobject = align_using_submobjects
+            if index_of_submobject_to_align is not None:
+                target_aligner = mob[index_of_submobject_to_align]
+            else:
+                target_aligner = mob
+            target_point = target_aligner.get_critical_point(
+                aligned_edge + direction
             )
         else:
             target_point = mobject_or_point
-        point_to_align = self.get_critical_point(
-            aligned_edge-direction,
-            use_submobject = align_using_submobjects
-        )
+        if submobject_to_align is not None:
+            aligner = submobject_to_align
+        elif index_of_submobject_to_align is not None:
+            aligner = self[index_of_submobject_to_align]
+        else:
+            aligner = self
+        point_to_align = aligner.get_critical_point(aligned_edge - direction)
         self.shift(target_point - point_to_align + buff*direction)
         return self
 
-    def align_to(self, mobject_or_point, direction = UP):
+    # 以什么来对齐，移动本对象和目标对象在水平或者垂直方向在一个方向上
+    def align_to(self, mobject_or_point, direction = ORIGIN, alignment_vect = UP):
+        """
+        Examples: 
+        mob1.align_to(mob2, UP) moves mob1 vertically so that its
+        top edge lines ups with mob2's top edge.
+
+        mob1.align_to(mob2, alignment_vector = RIGHT) moves mob1
+        horizontally so that it's center is directly above/below
+        the center of mob2
+        """
         if isinstance(mobject_or_point, Mobject):
             mob = mobject_or_point
-            point = mob.get_edge_center(direction)
+            target_point = mob.get_critical_point(direction)
         else:
-            point = mobject_or_point
-        diff = point - self.get_edge_center(direction) 
-        self.shift(direction*np.dot(diff, direction))
+            target_point = mobject_or_point
+        direction_norm = np.linalg.norm(direction)
+        if direction_norm > 0:
+            alignment_vect = np.array(direction)/direction_norm
+            reference_point = self.get_critical_point(direction)
+        else:
+            reference_point = self.get_center()
+        diff = target_point - reference_point
+        self.shift(alignment_vect*np.dot(diff, alignment_vect))
         return self
 
     def shift_onto_screen(self, **kwargs):
@@ -321,42 +383,42 @@ class Mobject(object):
         return False
 
     def stretch_about_point(self, factor, dim, point):
-        self.do_about_point(point, self.stretch, factor, dim)
-        return self
+        return self.stretch(factor, dim, about_point = point)
 
     def stretch_in_place(self, factor, dim):
-        self.do_in_place(self.stretch, factor, dim)
-        return self
+        #Now redundant with stretch
+        return self.stretch(factor, dim)
 
-    def rescale_to_fit(self, length, dim, stretch = False):
+    # rescale 重新调节
+    def rescale_to_fit(self, length, dim, stretch = False, **kwargs):
         old_length = self.length_over_dim(dim)
         if old_length == 0:
             return self
         if stretch:
-            self.stretch_in_place(length/old_length, dim)
+            self.stretch(length/old_length, dim, **kwargs)
         else:
-            self.scale_in_place(length/old_length)
+            self.scale(length/old_length, **kwargs)
         return self
 
-    def stretch_to_fit_width(self, width):
-        return self.rescale_to_fit(width, 0, stretch = True)
+    def stretch_to_fit_width(self, width, **kwargs):
+        return self.rescale_to_fit(width, 0, stretch = True, **kwargs)
 
-    def stretch_to_fit_height(self, height):
-        return self.rescale_to_fit(height, 1, stretch = True)
+    def stretch_to_fit_height(self, height, **kwargs):
+        return self.rescale_to_fit(height, 1, stretch = True, **kwargs)
 
-    def scale_to_fit_width(self, width):
-        return self.rescale_to_fit(width, 0, stretch = False)
+    def scale_to_fit_width(self, width, **kwargs):
+        return self.rescale_to_fit(width, 0, stretch = False, **kwargs)
 
-    def scale_to_fit_height(self, height):
-        return self.rescale_to_fit(height, 1, stretch = False)
+    def scale_to_fit_height(self, height, **kwargs):
+        return self.rescale_to_fit(height, 1, stretch = False, **kwargs)
 
-    def scale_to_fit_depth(self, depth):
-        return self.rescale_to_fit(depth, 2, stretch = False)
+    def scale_to_fit_depth(self, depth, **kwargs):
+        return self.rescale_to_fit(depth, 2, stretch = False, **kwargs)
 
     def space_out_submobjects(self, factor = 1.5, **kwargs):
-        self.scale_in_place(factor)
+        self.scale(factor, **kwargs)
         for submob in self.submobjects:
-            submob.scale_in_place(1./factor)
+            submob.scale(1./factor)
         return self
 
     def move_to(self, point_or_mobject, aligned_edge = ORIGIN):
@@ -384,6 +446,10 @@ class Mobject(object):
         self.shift(mobject.get_center() - self.get_center())
         return self
 
+    def surround(self, mobject, dim_to_match = 0, stretch = False, buffer_factor = 1.2):
+        self.replace(mobject, dim_to_match, stretch)
+        self.scale_in_place(buffer_factor)
+
     def position_endpoints_on(self, start, end):
         curr_vect = self.points[-1] - self.points[0]
         if np.all(curr_vect == 0):
@@ -396,6 +462,26 @@ class Mobject(object):
         )
         self.shift(start-self.points[0])
         return self
+
+    ## Match other mobvject properties
+
+    def match_color(self, mobject):
+        return self.highlight(mobject.get_color())
+
+    def match_dim(self, mobject, dim, **kwargs):
+        return self.rescale_to_fit(
+            mobject.length_over_dim(dim), dim,
+            **kwargs
+        )
+
+    def match_width(self, mobject, **kwargs):
+        return self.match_dim(mobject, 0, **kwargs)
+
+    def match_height(self, mobject, **kwargs):
+        return self.match_dim(mobject, 1, **kwargs)
+
+    def match_depth(self, mobject, **kwargs):
+        return self.match_dim(mobject, 2, **kwargs)
 
     ## Color functions
 
@@ -415,6 +501,10 @@ class Mobject(object):
         self.submobject_gradient_highlight(*colors)
         return self
 
+    def radial_gradient_highlight(self, center = None, radius = 1, inner_color = WHITE, outer_color = BLACK):
+        self.submobject_radial_gradient_highlight(center, radius, inner_color, outer_color)
+        return self
+
     def submobject_gradient_highlight(self, *colors):
         if len(colors) == 0:
             raise Exception("Need at least one color")
@@ -423,8 +513,22 @@ class Mobject(object):
 
         mobs = self.family_members_with_points()
         new_colors = color_gradient(colors, len(mobs))
+
         for mob, color in zip(mobs, new_colors):
             mob.highlight(color, family = False)
+        return self
+
+    def submobject_radial_gradient_highlight(self, center = None, radius = 1, inner_color = WHITE, outer_color = BLACK):
+        mobs = self.family_members_with_points()
+        if center == None:
+            center = self.get_center()
+
+        for mob in self.family_members_with_points():
+            t = np.linalg.norm(mob.get_center() - center)/radius
+            t = min(t,1)
+            mob_color = interpolate_color(inner_color, outer_color, t)
+            mob.highlight(mob_color, family = False)
+
         return self
 
     def set_color(self, color):
@@ -436,6 +540,7 @@ class Mobject(object):
         self.highlight(self.color)
         return self
 
+    #褪色到什么颜色
     def fade_to(self, color, alpha):
         for mob in self.family_members_with_points():
             start = color_to_rgb(mob.get_color())
@@ -444,6 +549,7 @@ class Mobject(object):
             mob.highlight(Color(rgb = new_rgb), family = False)
         return self
 
+    #褪色
     def fade(self, darkness = 0.5):
         self.fade_to(BLACK, darkness)
         return self
@@ -451,7 +557,7 @@ class Mobject(object):
     def get_color(self):
         return self.color
     ##
-
+    # 保存状态就是对本对象做一个浅拷贝或者做一个深拷贝
     def save_state(self, use_deepcopy = False):
         if hasattr(self, "saved_state"):
             #Prevent exponential growth of data
@@ -470,11 +576,7 @@ class Mobject(object):
             sm1.interpolate(sm1, sm2, 1)
         return self
 
-    def apply_complex_function(self, function, **kwargs):
-        return self.apply_function(
-            lambda (x, y, z) : complex_to_R3(function(complex(x, y))),
-            **kwargs
-        )
+    ##
 
     def reduce_across_dimension(self, points_func, reduce_func, dim):
         try:
@@ -491,10 +593,14 @@ class Mobject(object):
         except:
             return 0
 
+    #getattr  获取属性值
     def get_merged_array(self, array_attr):
-        result = np.zeros((0, self.dim))
+        result = None
         for mob in self.family_members_with_points():
-            result = np.append(result, getattr(mob, array_attr), 0)
+            if result is None:
+                result = getattr(mob, array_attr)
+            else:
+                result = np.append(result, getattr(mob, array_attr), 0)
         return result
 
     def get_all_points(self):
@@ -508,9 +614,8 @@ class Mobject(object):
     def get_num_points(self):
         return len(self.points)
 
-    def get_critical_point(self, direction, use_submobject = False):
-        if use_submobject:
-            return self.get_submobject_critical_point(direction)
+    #critical 关键、批评、极其重要 获取关键点
+    def get_critical_point(self, direction):
         result = np.zeros(self.dim)
         for dim in range(self.dim):
             if direction[dim] <= 0:
@@ -525,17 +630,6 @@ class Mobject(object):
             else:
                 result[dim] = max_point
         return result
-
-    def get_submobject_critical_point(self, direction):
-        if len(self.split()) == 1:
-            return self.get_critical_point(direction)
-        with_points = self.family_members_with_points()
-        submob_critical_points = np.array([
-            submob.get_critical_point(direction)
-            for submob in with_points
-        ])
-        index = np.argmax(np.dot(direction, submob_critical_points.T))
-        return submob_critical_points[index]
 
     # Pseudonyms for more general get_critical_point method
     def get_edge_center(self, direction):
@@ -593,14 +687,21 @@ class Mobject(object):
 
     ## Family matters
 
-    def __getitem__(self, index):
-        return self.split()[index]
+    def __getitem__(self, value):
+        self_list = self.split()
+        if isinstance(value, slice):
+            GroupClass = self.get_group_class()
+            return GroupClass(*self_list.__getitem__(value))
+        return self_list.__getitem__(value)
 
     def __iter__(self):
         return iter(self.split())
 
     def __len__(self):
         return len(self.split())
+
+    def get_group_class(self):
+        return Group
 
     def split(self):
         result = [self] if len(self.points) > 0 else []
@@ -643,6 +744,7 @@ class Mobject(object):
         ]).arrange_submobjects(v2, **kwargs)
         return self
 
+    # 对子对象进行排序，排序方式是根据center进行
     def sort_submobjects(self, point_to_num_func = lambda p : p[0]):
         self.submobjects.sort(
             lambda *mobs : cmp(*[
@@ -666,7 +768,6 @@ class Mobject(object):
         Should by a point of the appropriate type
         """
         raise Exception("Not implemented")
-
 
     def align_points(self, mobject):
         count1 = self.get_num_points()

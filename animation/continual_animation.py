@@ -1,20 +1,29 @@
+# _*_ coding:utf-8 _*_
+
 from helpers import *
 from mobject import Mobject, Group
 from simple_animations import MaintainPositionRelativeTo
 import copy
 
+# Continual 不间断的、不停的。
 class ContinualAnimation(object):
     CONFIG = {
+        # 上升时间
         "start_up_time" : 1,
+        # 下降时间
         "wind_down_time" : 1,
+        # 设置结束时间无限大
         "end_time" : np.inf,
     }
     def __init__(self, mobject, **kwargs):
         mobject = instantiate(mobject)
         assert(isinstance(mobject, Mobject))
         digest_config(self, kwargs, locals())
+        # 内部时间
         self.internal_time = 0
+        # 外部时间
         self.external_time = 0
+        # set up 建立
         self.setup()
         self.update(0)
 
@@ -50,6 +59,7 @@ class ContinualAnimation(object):
     def copy(self):
         return copy.deepcopy(self)
 
+# 不间断动画对象组
 class ContinualAnimationGroup(ContinualAnimation):
     CONFIG = {
         "start_up_time" : 0,
@@ -64,15 +74,28 @@ class ContinualAnimationGroup(ContinualAnimation):
         for continual_animation in self.continual_animations:
             continual_animation.update(dt)
 
+# ambient 环境、rotation 选择
 class AmbientRotation(ContinualAnimation):
     CONFIG = {
         "axis" : OUT,
         "rate" : np.pi/12, #Radians per second
+        "in_place" : True,
+        "about_point" : None,
     }
 
     def update_mobject(self, dt):
-        self.mobject.rotate(dt*self.rate, axis = self.axis)
+        if self.about_point:
+            about_point = self.about_point
+        elif self.in_place:
+            about_point = self.mobject.get_center()
+        else:
+            about_point = ORIGIN
+        self.mobject.rotate(
+            dt*self.rate, axis = self.axis,
+            about_point = about_point
+        )
 
+# 环境移动
 class AmbientMovement(ContinualAnimation):
     CONFIG = {
         "direction" : RIGHT,
@@ -82,29 +105,59 @@ class AmbientMovement(ContinualAnimation):
     def update_mobject(self, dt):
         self.mobject.shift(dt*self.rate*self.direction)
 
+# 通过函数持续更新动画
 class ContinualUpdateFromFunc(ContinualAnimation):
+    CONFIG = {
+        "function_depends_on_dt" : False
+    }
     def __init__(self, mobject, func, **kwargs):
         self.func = func
-        self.func_arg_count = func.func_code.co_argcount
-        if self.func_arg_count > 2:
-            raise Exception("ContinualUpdateFromFunc function must take 1 or 2 args")
         ContinualAnimation.__init__(self, mobject, **kwargs)
 
     def update_mobject(self, dt):
-        args = (self.mobject, dt)
-        self.func(*args[:self.func_arg_count])
+        if self.function_depends_on_dt:
+            self.func(self.mobject, dt)
+        else:
+            self.func(self.mobject)
+
+class ContinualUpdateFromTimeFunc(ContinualUpdateFromFunc):
+    CONFIG = {
+        "function_depends_on_dt" : True
+    }
 
 class ContinualMaintainPositionRelativeTo(ContinualAnimation):
+    # TODO: Possibly reimplement using CycleAnimation?
     def __init__(self, mobject, tracked_mobject, **kwargs):
         self.anim = MaintainPositionRelativeTo(mobject, tracked_mobject, **kwargs)
         ContinualAnimation.__init__(self, mobject, **kwargs)
 
     def update_mobject(self, dt):
-        self.anim.update(0)
+        self.anim.update(0) # 0 is arbitrary
 
+class NormalAnimationAsContinualAnimation(ContinualAnimation):
+    CONFIG = {
+        "start_up_time" : 0,
+        "wind_down_time" : 0,
+    }
+    def __init__(self, animation, **kwargs):
+        self.animation = animation
+        ContinualAnimation.__init__(self, animation.mobject, **kwargs)
 
+    def update_mobject(self, dt):
+        self.animation.update(
+            min(float(self.internal_time)/self.animation.run_time, 1)
+        )
 
+# 循环动画
+class CycleAnimation(ContinualAnimation):
+    def __init__(self, animation, **kwargs):
+        self.animation = animation
+        ContinualAnimation.__init__(self, animation.mobject, **kwargs)
 
+    def update_mobject(self, dt):
+        mod_value = self.internal_time % self.animation.run_time
+        alpha = mod_value/float(self.animation.run_time)
+        self.animation.update(alpha)
 
 
 

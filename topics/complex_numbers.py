@@ -1,3 +1,4 @@
+# _*_ coding:utf-8 _*_
 from helpers import *
 
 
@@ -10,7 +11,7 @@ from animation.simple_animations import Homotopy, ShowCreation, \
     SmoothedVectorizedHomotopy
 from scene import Scene
 
-
+#复数转换场景
 class ComplexTransformationScene(Scene):
     CONFIG = {
         "plane_config" : {},
@@ -166,11 +167,11 @@ def complex_string(complex_num):
 
 class ComplexPlane(NumberPlane):
     CONFIG = {
-        "color"                : BLUE,
-        "unit_size"            : 1,
-        "line_frequency"       : 1,
+        "color" : BLUE,
+        "unit_size" : 1,
+        "line_frequency" : 1,
         "faded_line_frequency" : 0.5,
-        "number_scale_factor"  : 0.5,
+        "number_scale_factor" : 0.5,
     }
     def __init__(self, **kwargs):
         digest_config(self, kwargs)

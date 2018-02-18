@@ -1,3 +1,5 @@
+# _*_ coding:utf-8 _*_
+
 from helpers import *
 
 from vectorized_mobject import VMobject, VGroup, VectorizedPoint
@@ -13,7 +15,7 @@ class TexSymbol(VMobjectFromSVGPathstring):
     def pointwise_become_partial(self, mobject, a, b):
         #TODO, this assumes a = 0
         if b < 0.5:
-            b = 2*b 
+            b = 2*b
             added_width = 1
             opacity = 0
         else:
@@ -36,7 +38,7 @@ class TexMobject(SVGMobject):
         "arg_separator"     : " ",
         "height" : None,
         "organize_left_to_right" : False,
-        "propogate_style_to_family" : True,
+        "propagate_style_to_family" : True,
         "alignment" : "",
     }
     def __init__(self, *args, **kwargs):
@@ -87,7 +89,7 @@ class TexMobject(SVGMobject):
             should_replace = reduce(op.and_, [
                 t1 in tex,
                 t2 not in tex,
-                len(tex) > len(t1) and tex[len(t1)] in "()[]|\\"
+                len(tex) > len(t1) and tex[len(t1)] in "()[]<>|.\\"
             ])
             if should_replace:
                 tex = tex.replace(t1, "\\big")
@@ -115,7 +117,7 @@ class TexMobject(SVGMobject):
 
     def handle_multiple_args(self):
         """
-        Reorganize existing submojects one layer 
+        Reorganize existing submojects one layer
         deeper based on the structure of args (as a list of strings)
         """
         new_submobjects = []
@@ -166,9 +168,16 @@ class TexMobject(SVGMobject):
             part.highlight(color)
         return self
 
-    def highlight_by_tex_to_color_map(self, tex_to_color_map):
-        for tex, color in tex_to_color_map.items():
-            self.highlight_by_tex(tex, color)
+    def highlight_by_tex_to_color_map(self, texs_to_color_map, **kwargs):
+        for texs, color in texs_to_color_map.items():
+            try:
+                # If the given key behaves like strings
+                texs + ''
+                self.highlight_by_tex(texs, color, **kwargs)
+            except TypeError:
+                # If the given key is a tuple
+                for tex in texs:
+                    self.highlight_by_tex(tex, color, **kwargs)
         return self
 
     def index_of_part(self, part):
@@ -188,7 +197,7 @@ class TexMobject(SVGMobject):
 
     def add_background_rectangle(self, color = BLACK, opacity = 0.75):
         self.background_rectangle = BackgroundRectangle(
-            self, color = color, 
+            self, color = color,
             fill_opacity = opacity
         )
         letters = VMobject(*self.submobjects)
@@ -211,7 +220,7 @@ class Brace(TexMobject):
     def __init__(self, mobject, direction = DOWN, **kwargs):
         digest_config(self, kwargs, locals())
         angle = -np.arctan2(*direction[:2]) + np.pi
-        mobject.rotate(-angle)
+        mobject.rotate(-angle, about_point = ORIGIN)
         left  = mobject.get_corner(DOWN+LEFT)
         right = mobject.get_corner(DOWN+RIGHT)
         target_width = right[0]-left[0]
@@ -227,13 +236,13 @@ class Brace(TexMobject):
         self.stretch_to_fit_width(target_width)
         self.shift(left - self.get_corner(UP+LEFT) + self.buff*DOWN)
         for mob in mobject, self:
-            mob.rotate(angle)
+            mob.rotate(angle, about_point = ORIGIN)
 
     def put_at_tip(self, mob, use_next_to = True, **kwargs):
         if use_next_to:
             mob.next_to(
-                self.get_tip(), 
-                np.round(self.get_direction()), 
+                self.get_tip(),
+                np.round(self.get_direction()),
                 **kwargs
             )
         else:
@@ -305,7 +314,7 @@ def tex_hash(expression, template_tex_file):
 
 def tex_to_svg_file(expression, template_tex_file):
     image_dir = os.path.join(
-        TEX_IMAGE_DIR, 
+        TEX_IMAGE_DIR,
         tex_hash(expression, template_tex_file)
     )
     if os.path.exists(image_dir):
@@ -316,13 +325,13 @@ def tex_to_svg_file(expression, template_tex_file):
 
 def generate_tex_file(expression, template_tex_file):
     result = os.path.join(
-        TEX_DIR, 
+        TEX_DIR,
         tex_hash(expression, template_tex_file)
     ) + ".tex"
     if not os.path.exists(result):
-        print "Writing \"%s\" to %s"%(
+        print("Writing \"%s\" to %s"%(
             "".join(expression), result
-        )
+        ))
         with open(template_tex_file, "r") as infile:
             body = infile.read()
             body = body.replace(TEX_TEXT_TO_REPLACE, expression)
@@ -339,8 +348,8 @@ def tex_to_dvi(tex_file):
     result = tex_file.replace(".tex", ".dvi")
     if not os.path.exists(result):
         commands = [
-            "latex", 
-            "-interaction=batchmode", 
+            "latex",
+            "-interaction=batchmode",
             "-halt-on-error",
             "-output-directory=" + TEX_DIR,
             tex_file,
@@ -361,7 +370,7 @@ def tex_to_dvi(tex_file):
 
 def dvi_to_svg(dvi_file, regen_if_exists = False):
     """
-    Converts a dvi, which potentially has multiple slides, into a 
+    Converts a dvi, which potentially has multiple slides, into a
     directory full of enumerated pngs corresponding with these slides.
     Returns a list of PIL Image objects for these images sorted as they
     where in the dvi
@@ -381,17 +390,3 @@ def dvi_to_svg(dvi_file, regen_if_exists = False):
         ]
         os.system(" ".join(commands))
     return result
-
-
-
-
-
-
-
-
-
-
-
-
-
-

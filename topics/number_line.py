@@ -1,9 +1,11 @@
+# _*_ coding:utf-8 _*_
 from helpers import *
 
 from mobject import Mobject1D
 from mobject.vectorized_mobject import VMobject, VGroup
 from mobject.tex_mobject import TexMobject
 from topics.geometry import Line, Arrow
+from topics.functions import ParametricFunction
 from scene import Scene
 
 class NumberLine(VMobject):
@@ -14,21 +16,23 @@ class NumberLine(VMobject):
         "unit_size" : 1,
         "tick_size" : 0.1,
         "tick_frequency" : 1,
-        "leftmost_tick" : None, #Defaults to ceil(x_min)
+        "leftmost_tick" : None, #Defaults to value near x_min s.t. 0 is a tick
         "numbers_with_elongated_ticks" : [0],
         "numbers_to_show" : None,
         "longer_tick_multiple" : 2,
         "number_at_center" : 0,
         "number_scale_val" : 0.75,
-        "line_to_number_vect" : DOWN,
+        "label_direction" : DOWN,
         "line_to_number_buff" : MED_SMALL_BUFF,
         "include_tip" : False,
-        "propogate_style_to_family" : True,
+        "propagate_style_to_family" : True,
     }
+
     def __init__(self, **kwargs):
         digest_config(self, kwargs)
         if self.leftmost_tick is None:
-            self.leftmost_tick = np.ceil(self.x_min)
+            tf = self.tick_frequency
+            self.leftmost_tick = tf*np.ceil(self.x_min/tf)
         VMobject.__init__(self, **kwargs)
         if self.include_tip:
             self.add_tip()
@@ -37,10 +41,20 @@ class NumberLine(VMobject):
         self.main_line = Line(self.x_min*RIGHT, self.x_max*RIGHT)
         self.tick_marks = VGroup()
         self.add(self.main_line, self.tick_marks)
+        rounding_value = int(-np.log10(0.1*self.tick_frequency))
+        rounded_numbers_with_elongated_ticks = np.round(
+            self.numbers_with_elongated_ticks, 
+            rounding_value
+        )
+
         for x in self.get_tick_numbers():
-            self.add_tick(x, self.tick_size)
-        for x in self.numbers_with_elongated_ticks:
-            self.add_tick(x, self.longer_tick_multiple*self.tick_size)
+            rounded_x = np.round(x, rounding_value)
+            if rounded_x in rounded_numbers_with_elongated_ticks:
+                tick_size_used = self.longer_tick_multiple*self.tick_size
+            else:
+                tick_size_used = self.tick_size
+            self.add_tick(x, tick_size_used)
+
         self.stretch(self.unit_size, 0)
         self.shift(-self.number_to_point(self.number_at_center))
 
@@ -101,7 +115,7 @@ class NumberLine(VMobject):
             mob.scale(self.number_scale_val)
             mob.next_to(
                 self.number_to_point(number),
-                self.line_to_number_vect,
+                self.label_direction,
                 self.line_to_number_buff,
             )
             result.add(mob)
@@ -123,6 +137,8 @@ class NumberLine(VMobject):
         self.tip = tip
         self.add(tip)
 
+
+
 class UnitInterval(NumberLine):
     CONFIG = {
         "x_min" : 0,
@@ -135,12 +151,15 @@ class UnitInterval(NumberLine):
 
 class Axes(VGroup):
     CONFIG = {
-        "propogate_style_to_family" : True,
+        "propagate_style_to_family" : True,
         "three_d" : False,
         "number_line_config" : {
             "color" : LIGHT_GREY,
             "include_tip" : True,
         },
+        "x_axis_config" : {},
+        "y_axis_config" : {},
+        "z_axis_config" : {},
         "x_min" : -SPACE_WIDTH,
         "x_max" : SPACE_WIDTH,
         "y_min" : -SPACE_HEIGHT,
@@ -148,30 +167,62 @@ class Axes(VGroup):
         "z_min" : -3.5,
         "z_max" : 3.5,
         "z_normal" : DOWN,
+        "default_num_graph_points" : 100,
     }
     def __init__(self, **kwargs):
         VGroup.__init__(self, **kwargs)
-        self.x_axis = NumberLine(
-            x_min = self.x_min,
-            x_max = self.x_max,
-            **self.number_line_config
-        )
-        self.y_axis = NumberLine(
-            x_min = self.y_min,
-            x_max = self.y_max,
-            **self.number_line_config
-        )
-        self.y_axis.rotate(np.pi/2)
+        self.x_axis = self.get_axis(self.x_min, self.x_max, self.x_axis_config)
+        self.y_axis = self.get_axis(self.y_min, self.y_max, self.y_axis_config)
+        self.y_axis.rotate(np.pi/2, about_point = ORIGIN)
         self.add(self.x_axis, self.y_axis)
         if self.three_d:
-            self.z_axis = NumberLine(
-                x_min = self.z_min,
-                x_max = self.z_max,
-                **self.number_line_config
+            self.z_axis = self.get_axis(self.z_min, self.z_max, self.z_axis_config)
+            self.z_axis.rotate(-np.pi/2, UP, about_point = ORIGIN)
+            self.z_axis.rotate(
+                angle_of_vector(self.z_normal), OUT,
+                about_point = ORIGIN
             )
-            self.z_axis.rotate(-np.pi/2, UP)
-            self.z_axis.rotate(angle_of_vector(self.z_normal), OUT)
             self.add(self.z_axis)
+
+    def get_axis(self, min_val, max_val, extra_config):
+        config = dict(self.number_line_config)
+        config.update(extra_config)
+        return NumberLine(x_min = min_val, x_max = max_val, **config)
+
+    def coords_to_point(self, x, y):
+        origin = self.x_axis.number_to_point(0)
+        x_axis_projection = self.x_axis.number_to_point(x)
+        y_axis_projection = self.y_axis.number_to_point(y)
+        return x_axis_projection + y_axis_projection - origin
+
+    def point_to_coords(self, point):
+        return (
+            self.x_axis.point_to_number(point), 
+            self.y_axis.point_to_number(point),
+        )
+
+    def get_graph(
+        self, function, num_graph_points = None, 
+        x_min = None,
+        x_max = None,
+        **kwargs
+        ):
+        kwargs["fill_opacity"] = kwargs.get("fill_opacity", 0)
+        kwargs["num_anchor_points"] = \
+            num_graph_points or self.default_num_graph_points
+        x_min = x_min or self.x_min
+        x_max = x_max or self.x_max
+        graph = ParametricFunction(
+            lambda t : self.coords_to_point(t, function(t)),
+            t_min = x_min,
+            t_max = x_max,
+            **kwargs
+        )
+        graph.underlying_function = function
+        return graph
+
+    def input_to_graph_point(self, x, graph):
+        return self.coords_to_point(x, graph.underlying_function(x))
 
 class ThreeDAxes(Axes):
     CONFIG = {
@@ -197,9 +248,9 @@ class NumberPlane(VMobject):
         "y_line_frequency" : 1,
         "secondary_line_ratio" : 1,
         "written_coordinate_height" : 0.2,
-        "propogate_style_to_family" : False,
+        "propagate_style_to_family" : False,
+        "make_smooth_after_applying_functions" : True,
     }
-    
     def generate_points(self):
         if self.x_radius is None:
             center_to_edge = (SPACE_WIDTH + abs(self.center_point[0])) 
@@ -271,6 +322,17 @@ class NumberPlane(VMobject):
         y = new_point[1]/self.get_y_unit_size()
         return x, y
 
+    # Does not recompute center, unit_sizes for each call; useful for
+    # iterating over large lists of points, but does assume these 
+    # attributes are kept accurate. (Could alternatively have a method
+    # which returns a function dynamically created after a single 
+    # call to each of get_center(), get_x_unit_size(), etc.)
+    def point_to_coords_cheap(self, point):
+        new_point = point - self.center_point
+        x = new_point[0]/self.x_unit_size
+        y = new_point[1]/self.y_unit_size
+        return x, y
+
     def get_x_unit_size(self):
         return self.axes.get_width() / (2.0*self.x_radius)
 
@@ -335,10 +397,6 @@ class NumberPlane(VMobject):
                 mob.insert_n_anchor_points(num_inserted_anchor_points-num_anchors)
                 mob.make_smooth()
         return self
-
-    def apply_function(self, function, maintain_smoothness = True):
-        VMobject.apply_function(self, function, maintain_smoothness = maintain_smoothness)
-
 
 
 

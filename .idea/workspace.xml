@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="c5d7b253-cb41-4b4c-9ecb-b81ae1ca2a8d" name="Default" comment="">
+      <change beforePath="$PROJECT_DIR$/README.md" afterPath="$PROJECT_DIR$/README.md" />
+      <change beforePath="$PROJECT_DIR$/animation/animation.py" afterPath="$PROJECT_DIR$/animation/animation.py" />
+      <change beforePath="$PROJECT_DIR$/animation/continual_animation.py" afterPath="$PROJECT_DIR$/animation/continual_animation.py" />
+      <change beforePath="$PROJECT_DIR$/animation/playground.py" afterPath="$PROJECT_DIR$/animation/playground.py" />
+      <change beforePath="$PROJECT_DIR$/animation/simple_animations.py" afterPath="$PROJECT_DIR$/animation/simple_animations.py" />
+      <change beforePath="$PROJECT_DIR$/animation/transform.py" afterPath="$PROJECT_DIR$/animation/transform.py" />
+      <change beforePath="$PROJECT_DIR$/camera.py" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/constants.py" afterPath="$PROJECT_DIR$/constants.py" />
+      <change beforePath="$PROJECT_DIR$/eop/__init__.py" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/eop/bayes.py" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/eop/bayes_footnote.py" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/eop/independence.py" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/example_scenes.py" afterPath="$PROJECT_DIR$/example_scenes.py" />
+      <change beforePath="$PROJECT_DIR$/extract_scene.py" afterPath="$PROJECT_DIR$/extract_scene.py" />
+      <change beforePath="$PROJECT_DIR$/files/images/Bubbles_speech.svg" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/files/images/Bubbles_thought.svg" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/files/images/PiCreature/PiCreatures_plain.svg" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/helpers.py" afterPath="$PROJECT_DIR$/helpers.py" />
+      <change beforePath="$PROJECT_DIR$/mobject/__init__.py" afterPath="$PROJECT_DIR$/mobject/__init__.py" />
+      <change beforePath="$PROJECT_DIR$/mobject/image_mobject.py" afterPath="$PROJECT_DIR$/mobject/image_mobject.py" />
+      <change beforePath="$PROJECT_DIR$/mobject/mobject.py" afterPath="$PROJECT_DIR$/mobject/mobject.py" />
+      <change beforePath="$PROJECT_DIR$/mobject/point_cloud_mobject.py" afterPath="$PROJECT_DIR$/mobject/point_cloud_mobject.py" />
+      <change beforePath="$PROJECT_DIR$/mobject/region.py" afterPath="$PROJECT_DIR$/mobject/region.py" />
+      <change beforePath="$PROJECT_DIR$/mobject/svg_mobject.py" afterPath="$PROJECT_DIR$/mobject/svg_mobject.py" />
+      <change beforePath="$PROJECT_DIR$/mobject/tex_mobject.py" afterPath="$PROJECT_DIR$/mobject/tex_mobject.py" />
+      <change beforePath="$PROJECT_DIR$/mobject/vectorized_mobject.py" afterPath="$PROJECT_DIR$/mobject/vectorized_mobject.py" />
+      <change beforePath="$PROJECT_DIR$/nn/__init__.py" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/nn/image_map" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/nn/mnist_loader.py" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/nn/network.py" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/nn/part1.py" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/nn/part2.py" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/nn/part3.py" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/nn/pretrained_weights_and_biases" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/nn/pretrained_weights_and_biases_36" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/nn/pretrained_weights_and_biases_on_zero" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/old_projects/eoc/chapter1.py" afterPath="$PROJECT_DIR$/old_projects/eoc/chapter1.py" />
+      <change beforePath="$PROJECT_DIR$/scene/reconfigurable_scene.py" afterPath="$PROJECT_DIR$/scene/reconfigurable_scene.py" />
+      <change beforePath="$PROJECT_DIR$/scene/scene.py" afterPath="$PROJECT_DIR$/scene/scene.py" />
+      <change beforePath="$PROJECT_DIR$/scene/scene_from_video.py" afterPath="$PROJECT_DIR$/scene/scene_from_video.py" />
+      <change beforePath="$PROJECT_DIR$/scene/tk_scene.py" afterPath="$PROJECT_DIR$/scene/tk_scene.py" />
+      <change beforePath="$PROJECT_DIR$/scene/zoomed_scene.py" afterPath="$PROJECT_DIR$/scene/zoomed_scene.py" />
+      <change beforePath="$PROJECT_DIR$/stage_animations.py" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/stage_scenes.py" afterPath="$PROJECT_DIR$/stage_scenes.py" />
+      <change beforePath="$PROJECT_DIR$/template.tex" afterPath="$PROJECT_DIR$/template.tex" />
+      <change beforePath="$PROJECT_DIR$/text_template.tex" afterPath="$PROJECT_DIR$/text_template.tex" />
+      <change beforePath="$PROJECT_DIR$/topics/arithmetic.py" afterPath="$PROJECT_DIR$/topics/arithmetic.py" />
+      <change beforePath="$PROJECT_DIR$/topics/characters.py" afterPath="$PROJECT_DIR$/topics/characters.py" />
+      <change beforePath="$PROJECT_DIR$/topics/combinatorics.py" afterPath="$PROJECT_DIR$/topics/combinatorics.py" />
+      <change beforePath="$PROJECT_DIR$/topics/common_scenes.py" afterPath="$PROJECT_DIR$/topics/common_scenes.py" />
+      <change beforePath="$PROJECT_DIR$/topics/complex_numbers.py" afterPath="$PROJECT_DIR$/topics/complex_numbers.py" />
+      <change beforePath="$PROJECT_DIR$/topics/counting.py" afterPath="$PROJECT_DIR$/topics/counting.py" />
+      <change beforePath="$PROJECT_DIR$/topics/fractals.py" afterPath="$PROJECT_DIR$/topics/fractals.py" />
+      <change beforePath="$PROJECT_DIR$/topics/functions.py" afterPath="$PROJECT_DIR$/topics/functions.py" />
+      <change beforePath="$PROJECT_DIR$/topics/geometry.py" afterPath="$PROJECT_DIR$/topics/geometry.py" />
+      <change beforePath="$PROJECT_DIR$/topics/graph_scene.py" afterPath="$PROJECT_DIR$/topics/graph_scene.py" />
+      <change beforePath="$PROJECT_DIR$/topics/graph_theory.py" afterPath="$PROJECT_DIR$/topics/graph_theory.py" />
+      <change beforePath="$PROJECT_DIR$/topics/matrix.py" afterPath="$PROJECT_DIR$/topics/matrix.py" />
+      <change beforePath="$PROJECT_DIR$/topics/number_line.py" afterPath="$PROJECT_DIR$/topics/number_line.py" />
+      <change beforePath="$PROJECT_DIR$/topics/numerals.py" afterPath="$PROJECT_DIR$/topics/numerals.py" />
+      <change beforePath="$PROJECT_DIR$/topics/objects.py" afterPath="$PROJECT_DIR$/topics/objects.py" />
+      <change beforePath="$PROJECT_DIR$/topics/probability.py" afterPath="$PROJECT_DIR$/topics/probability.py" />
+      <change beforePath="$PROJECT_DIR$/topics/three_dimensions.py" afterPath="$PROJECT_DIR$/topics/three_dimensions.py" />
+      <change beforePath="$PROJECT_DIR$/topics/vector_space_scene.py" afterPath="$PROJECT_DIR$/topics/vector_space_scene.py" />
+    </list>
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="TRACKING_ENABLED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileEditorManager">
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file leaf-file-name="chapter1.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/old_projects/eoc/chapter1.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="3528">
+              <caret line="225" column="32" lean-forward="false" selection-start-line="225" selection-start-column="32" selection-end-line="225" selection-end-column="32" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="common_scenes.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/topics/common_scenes.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="72">
+              <caret line="14" column="6" lean-forward="false" selection-start-line="14" selection-start-column="6" selection-end-line="14" selection-end-column="6" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectFrameBounds" extendedState="1">
+    <option name="x" value="7" />
+    <option name="y" value="23" />
+    <option name="width" value="1639" />
+    <option name="height" value="958" />
+  </component>
+  <component name="ProjectView">
+    <navigator currentView="ProjectPane" proportions="" version="1">
+      <flattenPackages />
+      <showMembers />
+      <showModules />
+      <showLibraryContents />
+      <hideEmptyPackages />
+      <abbreviatePackageNames />
+      <autoscrollToSource />
+      <autoscrollFromSource />
+      <sortByType />
+      <manualOrder />
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="Scope" />
+      <pane id="Scratches" />
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="manim" type="b2602c69:ProjectViewProjectNode" />
+              <item name="manim" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="manim" type="b2602c69:ProjectViewProjectNode" />
+              <item name="manim" type="462c0819:PsiDirectoryNode" />
+              <item name="old_projects" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="manim" type="b2602c69:ProjectViewProjectNode" />
+              <item name="manim" type="462c0819:PsiDirectoryNode" />
+              <item name="old_projects" type="462c0819:PsiDirectoryNode" />
+              <item name="eoc" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="ShelveChangesManager" show_recycled="false">
+    <option name="remove_strategy" value="false" />
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="c5d7b253-cb41-4b4c-9ecb-b81ae1ca2a8d" name="Default" comment="" />
+      <created>1517666785250</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1517666785250</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="7" y="23" width="1639" height="958" extended-state="1" />
+    <layout>
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.2132262" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
+      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.3297619" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+    </layout>
+  </component>
+  <component name="VcsContentAnnotationSettings">
+    <option name="myLimit" value="2678400000" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager />
+    <watches-manager />
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/topics/common_scenes.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="72">
+          <caret line="14" column="6" lean-forward="false" selection-start-line="14" selection-start-column="6" selection-end-line="14" selection-end-column="6" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/old_projects/eoc/chapter1.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3528">
+          <caret line="225" column="32" lean-forward="false" selection-start-line="225" selection-start-column="32" selection-end-line="225" selection-end-column="32" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/animation/playground.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/animation/simple_animations.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/animation/transform.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mobject/image_mobject.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mobject/point_cloud_mobject.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mobject/svg_mobject.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mobject/vectorized_mobject.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mobject/tex_mobject.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mobject/mobject.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="8370">
+          <caret line="474" column="9" lean-forward="true" selection-start-line="474" selection-start-column="9" selection-end-line="474" selection-end-column="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/scene/reconfigurable_scene.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="18">
+          <caret line="1" column="0" lean-forward="true" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/stage_scenes.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/camera.py" />
+    <entry file="file://$PROJECT_DIR$/example_scenes.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extract_scene.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1635">
+          <caret line="120" column="18" lean-forward="true" selection-start-line="120" selection-start-column="18" selection-end-line="120" selection-end-column="18" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/animation/animation.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1167">
+          <caret line="22" column="42" lean-forward="true" selection-start-line="22" selection-start-column="42" selection-end-line="22" selection-end-column="42" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/animation/continual_animation.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1014">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/animation/playground.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/animation/simple_animations.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/animation/transform.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mobject/image_mobject.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mobject/mobject.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="8370">
+          <caret line="474" column="9" lean-forward="false" selection-start-line="474" selection-start-column="9" selection-end-line="474" selection-end-column="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mobject/point_cloud_mobject.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mobject/tex_mobject.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mobject/svg_mobject.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mobject/vectorized_mobject.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/scene/reconfigurable_scene.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="18">
+          <caret line="1" column="0" lean-forward="false" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/old_projects/eoc/chapter1.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3528">
+          <caret line="225" column="32" lean-forward="false" selection-start-line="225" selection-start-column="32" selection-end-line="225" selection-end-column="32" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/topics/common_scenes.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="72">
+          <caret line="14" column="6" lean-forward="false" selection-start-line="14" selection-start-column="6" selection-end-line="14" selection-end-column="6" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+  </component>
+</project>

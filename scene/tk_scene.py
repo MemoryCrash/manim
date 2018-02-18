@@ -1,3 +1,5 @@
+# _*_ coding:utf-8 _*_
+
 import Tkinter
 from PIL import ImageTk, Image
 import itertools as it

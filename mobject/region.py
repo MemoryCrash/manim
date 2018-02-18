@@ -1,3 +1,5 @@
+# _*_ coding:utf-8 _*_
+
 import numpy as np
 import itertools as it
 from PIL import Image
@@ -7,6 +9,7 @@ from mobject import Mobject
 
 from helpers import *
 
+#region 地区范围，不太明白这个模块的作用
 #TODO, this whole class should be something vectorized.
 class Region(Mobject):
     CONFIG = {

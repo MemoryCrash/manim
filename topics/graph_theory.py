@@ -1,3 +1,4 @@
+# _*_ coding:utf-8 _*_
 import itertools as it
 import numpy as np
 import operator as op
@@ -260,7 +261,7 @@ class GraphScene(Scene):
     def annotate_edges(self, mobject, fade_in = True, **kwargs):
         angles = map(np.arctan, map(Line.get_slope, self.edges))
         self.edge_annotations = [
-            mobject.copy().rotate(angle).shift(edge.get_center())
+            mobject.copy().rotate(angle).move_to(edge.get_center())
             for angle, edge in zip(angles, self.edges)
         ]
         if fade_in:

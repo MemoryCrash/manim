@@ -1,3 +1,4 @@
+# _*_ coding:utf-8 _*_
 import numpy as np
 
 from scene import Scene
@@ -192,7 +193,7 @@ class NumericalMatrixMultiplication(Scene):
 
         self.play(ShowCreation(h_lines))
         self.play(ShowCreation(v_lines))
-        self.dither()
+        self.wait()
         self.show_frame()
 
     def organize_matrices(self, left, right, result):
@@ -255,7 +256,7 @@ class NumericalMatrixMultiplication(Scene):
                     l_matrix[a][c].highlight(WHITE)
                     r_matrix[c][b].highlight(WHITE)
         self.play(FadeOut(circles), *lagging_anims)
-        self.dither()
+        self.wait()
 
 
 

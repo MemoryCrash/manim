@@ -1,3 +1,5 @@
+# _*_ coding:utf-8 _*_
+
 from PIL import Image
 from colour import Color
 import numpy as np
@@ -11,6 +13,8 @@ from copy import deepcopy
 from helpers import *
 from mobject import Mobject
 
+# 动画对象，参数有运行时间、速度函数是smooth
+# lag factor 滞后因子
 class Animation(object):
     CONFIG = {
         "run_time" : DEFAULT_ANIMATION_RUN_TIME,
@@ -24,10 +28,14 @@ class Animation(object):
         "lag_factor" : 2,
     }
     def __init__(self, mobject, **kwargs):
+        # 是否是对象
         mobject = instantiate(mobject)
         assert(isinstance(mobject, Mobject))
+        # 融合配置信息
         digest_config(self, kwargs, locals())
+        # 拷贝 mobjec 作为起始对象
         self.starting_mobject = self.mobject.copy()
+        # 如果速度函数不存在则给一个默认返回自己的速度函数
         if self.rate_func is None:
             self.rate_func = (lambda x : x)
         if self.name is None:
@@ -35,6 +43,7 @@ class Animation(object):
         self.all_families_zipped = self.get_all_families_zipped()
         self.update(0)
 
+    #更新配置
     def update_config(self, **kwargs):
         digest_config(self, kwargs)
         if "rate_func" in kwargs and kwargs["rate_func"] is None:
@@ -44,20 +53,23 @@ class Animation(object):
     def __str__(self):
         return self.name
 
+    #这里的拷贝表示的是深度拷贝
     def copy(self):
         return deepcopy(self)
 
+    #numpy.clip use to limit numpy array range
     def update(self, alpha):
-        if alpha < 0:
-            alpha = 0.0
-        if alpha > 1:
-            alpha = 1.0
+        # numpy的clip函数作用限制alpha的范围在0到1之间
+        alpha = np.clip(alpha, 0, 1)
+        # 使用速度函数的值更新动画
         self.update_mobject(self.rate_func(alpha))
 
+    #更新对象
     def update_mobject(self, alpha):
         families = self.all_families_zipped
         for i, mobs in enumerate(families):
             sub_alpha = self.get_sub_alpha(alpha, i, len(families))
+            #对子对象进行更新，这个由具体的子对象实现
             self.update_submobject(*list(mobs) + [sub_alpha])
         return self
 
@@ -71,12 +83,14 @@ class Animation(object):
         """ 
         return self.mobject, self.starting_mobject
 
+    # 获取家族所有的对象，过滤掉不包含点的。
     def get_all_families_zipped(self):
         return zip(*map(
             Mobject.family_members_with_points,
             self.get_all_mobjects()
         ))
 
+    # 获取子对象的alpha
     def get_sub_alpha(self, alpha, index, num_submobjects):
         if self.submobject_mode in ["lagged_start", "smoothed_lagged_start"]:
             prop = float(index)/num_submobjects
@@ -92,14 +106,17 @@ class Animation(object):
             return alpha
         raise Exception("Invalid submobject mode")
 
+    # 过滤、滤除
     def filter_out(self, *filter_functions):
         self.filter_functions += filter_functions
         return self
 
+    # 设置运行时间
     def set_run_time(self, time):
         self.run_time = time
         return self
 
+    # 获取运行时间
     def get_run_time(self):
         return self.run_time
 
@@ -128,13 +145,15 @@ class Animation(object):
                 surrounding_scene.add(self.mobject)
         return self
 
-
+# 同步动画的运行时间和速度函数
 def sync_animation_run_times_and_rate_funcs(*animations, **kwargs):
     for animation in animations:
         animation.update_config(**kwargs)
     max_run_time = max([a.run_time for a in animations])
     for animation in animations:
         if animation.run_time != max_run_time:
+            # 设置在0到float(animation.run_time)/max_run_time变化的
+            # animation.get_rate_func()
             new_rate_func = squish_rate_func(
                 animation.get_rate_func(),
                 0, float(animation.run_time)/max_run_time

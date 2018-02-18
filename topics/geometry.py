@@ -1,8 +1,13 @@
+#!/usr/bin/env python
+# _*_ coding:utf-8 _*_
 from helpers import *
 
 from mobject import Mobject
 from mobject.vectorized_mobject import VMobject, VGroup
 
+# 几何模块
+
+# 弧
 class Arc(VMobject):
     CONFIG = {
         "radius"           : 1.0,
@@ -11,32 +16,95 @@ class Arc(VMobject):
         "anchors_span_full_range" : True,
     }
     def __init__(self, angle, **kwargs):
-        digest_locals(self)
+        self.angle = angle
         VMobject.__init__(self, **kwargs)
 
     def generate_points(self):
-        self.set_anchor_points(
-            self.get_unscaled_anchor_points(),
-            mode = "smooth"
-        )
-        self.scale(self.radius)
-
-    def get_unscaled_anchor_points(self):
-        return [
+        anchors = np.array([
             np.cos(a)*RIGHT+np.sin(a)*UP
             for a in np.linspace(
                 self.start_angle, 
                 self.start_angle + self.angle, 
                 self.num_anchors
             )
-        ]
+        ])
+        #Figure out which control points will give the
+        #Appropriate tangent lines to the circle
+        d_theta = self.angle/(self.num_anchors-1.0)
+        tangent_vectors = np.zeros(anchors.shape)
+        tangent_vectors[:,1] = anchors[:,0]
+        tangent_vectors[:,0] = -anchors[:,1]
+        handles1 = anchors[:-1] + (d_theta/3)*tangent_vectors[:-1]
+        handles2 = anchors[1:] - (d_theta/3)*tangent_vectors[1:]
+        self.set_anchors_and_handles(
+            anchors, handles1, handles2
+        )
+        self.scale(self.radius, about_point = ORIGIN)
 
-    def add_tip(self, tip_length = 0.25):
+    def add_tip(self, tip_length = 0.25, at_start = False, at_end = True):
+        # clear out any old tips
+        for submob in self.submobjects:
+            if submob.mark_paths_closed == True: # is a tip
+                self.remove(submob)
+
         #TODO, do this a better way
-        arrow = Arrow(*self.points[-2:], tip_length = tip_length)
-        self.add(arrow.split()[-1])
+        p1 = p2 = p3 = p4 = None
+        start_arrow = end_arrow = None
+        if at_start:
+            p1, p2 = self.points[-3:-1]
+            # self.points[-2:] did overshoot
+            start_arrow = Arrow(
+                p1, 2*p2 - p1, 
+                tip_length = tip_length,
+                max_tip_length_to_length_ratio = 2.0
+            )
+            self.add(start_arrow.split()[-1]) # just the tip
+
+        if at_end:
+            p4, p3 = self.points[1:3]
+            # self.points[:2] did overshoot
+            end_arrow = Arrow(
+                p3, 2*p4 - p3, 
+                tip_length = tip_length,
+                max_tip_length_to_length_ratio = 2.0
+            )
+            self.add(end_arrow.split()[-1])
+        
+
+
+
+        
         self.highlight(self.get_color())
         return self
+
+
+
+    def get_arc_center(self):
+        first_point = self.points[0]
+        # 单位弧度 通过第一个点和弧度半径以及起始位置的角度计算得到弧度中心在笛卡尔坐标系中的位置
+        radial_unit_vector = np.array([np.cos(self.start_angle),np.sin(self.start_angle),0])
+        arc_center = first_point - self.radius * radial_unit_vector
+        return arc_center
+
+
+    def move_arc_center_to(self,point):
+        # 先获取原弧度的中心，然后用新的弧度中心减去原弧度中心，得到两个位置的距离
+        v = point - self.get_arc_center()
+        # 将原有的弧度整体按照两个位置进行移动
+        self.shift(v)
+        return self
+
+    # 获取结束角度。起始角度加上一个角度偏移
+    def stop_angle(self):
+        return self.start_angle + self.angle
+
+    # 设置弧度范围
+    def set_bound_angles(self,start=0,stop=np.pi):
+        self.start_angle = start
+        self.angle = stop - start
+        
+        return self
+
 
 class Circle(Arc):
     CONFIG = {
@@ -44,9 +112,18 @@ class Circle(Arc):
         "close_new_points" : True,
         "anchors_span_full_range" : False
     }
+    # 绘制360的弧就变成了一个圆
     def __init__(self, **kwargs):
         Arc.__init__(self, 2*np.pi, **kwargs)
 
+    def surround(self, mobject, dim_to_match = 0, stretch = False, buffer_factor = 1.2):
+        # Ignores dim_to_match and stretch; result will always be a circle
+        # TODO: Perhaps create an ellipse class to handle singele-dimension stretching
+        self.replace(mobject, dim_to_match, stretch)
+        self.scale_to_fit_width(np.sqrt(mobject.get_width()**2 + mobject.get_height()**2))
+        self.scale(buffer_factor)
+
+# 绘制一个半径很小的圆就变成了点
 class Dot(Circle):
     CONFIG = {
         "radius"       : 0.08,
@@ -59,11 +136,109 @@ class Dot(Circle):
         self.shift(point)
         self.init_colors()
 
+#椭圆，先绘制一个圆，然后对圆的宽和高进行拉伸得到椭圆
+class Ellipse(VMobject):
+    CONFIG = {
+        "width" : 2,
+        "height" : 1
+    }
+
+    def generate_points(self):
+        circle = Circle(radius = 1)
+        circle = circle.stretch_to_fit_width(self.width)
+        circle = circle.stretch_to_fit_height(self.height)
+        self.points = circle.points
+
+# 环，扇形
+class AnnularSector(VMobject):
+    CONFIG = {
+        "inner_radius" : 1,
+        "outer_radius" : 2,
+        "angle" : TAU/4,
+        "start_angle" : 0,
+        "fill_opacity" : 1,
+        "stroke_width" : 0,
+        "color" : WHITE,
+        "mark_paths_closed" : True,
+    }
+    def generate_points(self):
+        arc1 = Arc(
+            angle = self.angle,
+            start_angle = self.start_angle,
+            radius = self.inner_radius,
+        )
+        arc2 = Arc(
+            angle = -1*self.angle,
+            start_angle = self.start_angle+self.angle,
+            radius = self.outer_radius,
+        )
+        a1_to_a2_points = np.array([
+            interpolate(arc1.points[-1], arc2.points[0], alpha)
+            for alpha in np.linspace(0, 1, 4)
+        ])
+        a2_to_a1_points = np.array([
+            interpolate(arc2.points[-1], arc1.points[0], alpha)
+            for alpha in np.linspace(0, 1, 4)
+        ])
+        self.points = np.array(arc1.points)
+        self.add_control_points(a1_to_a2_points[1:])
+        self.add_control_points(arc2.points[1:])
+        self.add_control_points(a2_to_a1_points[1:])
+
+
+    def get_arc_center(self):
+        first_point = self.points[0]
+        last_point = self.points[-2]
+        v = last_point - first_point
+        radial_unit_vector = v/np.linalg.norm(v)
+        arc_center = first_point - self.inner_radius * radial_unit_vector
+        return arc_center
+
+    def move_arc_center_to(self,point):
+        v = point - self.get_arc_center()
+        self.shift(v)
+        return self
+
+# Sector 扇形
+class Sector(AnnularSector):
+    CONFIG = {
+        "outer_radius" : 1,
+        "inner_radius" : 0
+    }
+
+    @property
+    def radius(self):
+        return self.outer_radius
+
+    @radius.setter
+    def radius(self,new_radius):
+        self.outer_radius = new_radius
+
+# Annulus 环面
+class Annulus(Circle):
+    CONFIG = {
+        "inner_radius": 1,
+        "outer_radius": 2,
+        "fill_opacity" : 1,
+        "stroke_width" : 0,
+        "color" : WHITE,
+        "mark_paths_closed" : False,
+        "propagate_style_to_family" : True
+    }
+
+    def generate_points(self):
+        self.points = []
+        self.radius = self.outer_radius
+        outer_circle = Circle(radius = self.outer_radius)
+        inner_circle = Circle(radius=self.inner_radius)
+        inner_circle.flip()
+        self.points = outer_circle.points
+        self.add_subpath(inner_circle.points)
+
 class Line(VMobject):
     CONFIG = {
         "buff" : 0,
-        "considered_smooth" : False,
-        "path_arc" : None,
+        "path_arc" : None, # angle of arc specified here
         "n_arc_anchors" : 10, #Only used if path_arc is not None
     }
     def __init__(self, start, end, **kwargs):
@@ -80,8 +255,11 @@ class Line(VMobject):
                 path_func(self.start, self.end, alpha)
                 for alpha in np.linspace(0, 1, self.n_arc_anchors)
             ])
-            self.considered_smooth = True
         self.account_for_buff()
+
+    def set_path_arc(self,new_value):
+        self.path_arc = new_value
+        self.generate_points()
 
     def account_for_buff(self):
         length = self.get_arc_length()
@@ -188,6 +366,18 @@ class Line(VMobject):
         self.shift(new_start - self.get_start())
         return self
 
+    def insert_n_anchor_points(self, n):
+        if not self.path_arc:
+            n_anchors = self.get_num_anchor_points()
+            new_num_points = 3*(n_anchors + n)+1
+            self.points = np.array([
+                self.point_from_proportion(alpha)
+                for alpha in np.linspace(0, 1, new_num_points)
+            ])
+        else:
+            VMobject.insert_n_anchor_points(self, n)
+
+#Dashed 虚线
 class DashedLine(Line):
     CONFIG = {
         "dashed_segment_length" : 0.05
@@ -213,7 +403,7 @@ class DashedLine(Line):
         return self
 
     def get_start(self):
-        if len(self) > 0:
+        if len(self.points) > 0:
             return self[0].points[0]
         else:
             return self.start
@@ -232,7 +422,7 @@ class Arrow(Line):
         "max_tip_length_to_length_ratio" : 0.35,
         "max_stem_width_to_tip_width_ratio" : 0.3,
         "buff" : MED_SMALL_BUFF,
-        "propogate_style_to_family" : False,
+        "propagate_style_to_family" : False,
         "preserve_tip_size_when_scaling" : True,
         "normal_vector" : OUT,
         "use_rectangular_stem" : True,
@@ -247,7 +437,7 @@ class Arrow(Line):
         if self.use_rectangular_stem and not hasattr(self, "rect"):
             self.add_rectangular_stem()
         self.init_colors()
-
+    # tip 尖尖端
     def init_tip(self):
         self.tip = self.add_tip()
 
@@ -363,6 +553,7 @@ class Arrow(Line):
         Line.put_start_and_end_on(self, *args, **kwargs)
         self.set_tip_points(self.tip, preserve_normal = False)
         self.set_rectangular_stem_points()
+        return self
 
     def scale(self, scale_factor, **kwargs):
         Line.scale(self, scale_factor, **kwargs)
@@ -371,6 +562,9 @@ class Arrow(Line):
         if self.use_rectangular_stem:
             self.set_rectangular_stem_points()
         return self
+
+    def copy(self):
+        return self.deepcopy()
 
 class Vector(Arrow):
     CONFIG = {
@@ -387,17 +581,18 @@ class DoubleArrow(Arrow):
         self.tip = self.add_tip()
         self.second_tip = self.add_tip(add_at_end = False)
 
+# 贝塞尔曲线
 class CubicBezier(VMobject):
     def __init__(self, points, **kwargs):
         VMobject.__init__(self, **kwargs)
         self.set_points(points)
 
+# 多边形
 class Polygon(VMobject):
     CONFIG = {
         "color" : GREEN_D,
         "mark_paths_closed" : True,
         "close_new_points" : True,
-        "considered_smooth" : False,
     }
     def __init__(self, *vertices, **kwargs):
         assert len(vertices) > 1
@@ -410,6 +605,7 @@ class Polygon(VMobject):
     def get_vertices(self):
         return self.get_anchors_and_handles()[0]
 
+# 正多边形
 class RegularPolygon(Polygon):
     CONFIG = {
         "start_angle" : 0
@@ -419,7 +615,7 @@ class RegularPolygon(Polygon):
         start_vect = rotate_vector(RIGHT, self.start_angle)
         vertices = compass_directions(n, start_vect)
         Polygon.__init__(self, *vertices, **kwargs)
-
+# 长方形
 class Rectangle(VMobject):
     CONFIG = {
         "color"  : WHITE,
@@ -427,7 +623,6 @@ class Rectangle(VMobject):
         "width"  : 4.0,
         "mark_paths_closed" : True,
         "close_new_points" : True,
-        "considered_smooth" : False,
     }
     def generate_points(self):
         y, x = self.height/2., self.width/2.
@@ -438,6 +633,7 @@ class Rectangle(VMobject):
             x*LEFT+y*DOWN
         ], mode = "corners")
 
+# 正方型
 class Square(Rectangle):
     CONFIG = {
         "side_length" : 2.0,
@@ -534,7 +730,6 @@ class Grid(VMobject):
     CONFIG = {
         "height" : 6.0,
         "width"  : 6.0,
-        "considered_smooth" : False,
     }
     def __init__(self, rows, columns, **kwargs):
         digest_config(self, kwargs, locals())

@@ -1,3 +1,5 @@
+# _*_ coding:utf-8 _*_
+
 import numpy as np
 import itertools as it
 import os
@@ -22,8 +24,9 @@ class ImageMobject(Mobject):
     }
     def __init__(self, filename_or_array, **kwargs):
         digest_config(self, kwargs)
+        # 如果是路径则打开，如果是数组则之间进行赋值
         if isinstance(filename_or_array, str):
-            path = get_full_image_path(filename_or_array)
+            path = get_full_raster_image_path(filename_or_array)
             image = Image.open(path).convert(self.image_mode)
             self.pixel_array = np.array(image)
         else:

@@ -1,3 +1,5 @@
+# _*_ coding:utf-8 _*_
+
 import numpy as np
 import operator as op
 
@@ -8,12 +10,17 @@ from topics.geometry import Line
 
 from helpers import *
 
+# Vibrate 震动、摆动
 class Vibrate(Animation):
     CONFIG = {
+        #spatial 空间的
         "spatial_period"  : 6,
+        #temporal 时间的
         "temporal_period" : 1,
         "overtones"       : 4,
+        # amplitude 广度
         "amplitude"       : 0.5,
+        # radius 半径
         "radius"          : SPACE_WIDTH/2,
         "run_time"        : 3.0,
         "rate_func"      : None
@@ -48,6 +55,7 @@ class Vibrate(Animation):
 
 
 class TurnInsideOut(Transform):
+    # 设置路径函数为弧形路径
     CONFIG = {
         "path_func" : path_along_arc(np.pi/2)
     }

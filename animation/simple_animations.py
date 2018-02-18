@@ -1,31 +1,36 @@
+# _*_ coding:utf-8 _*_
+
 import numpy as np
 import itertools as it
 
 from helpers import *
 
-from mobject import Mobject
+from mobject import Mobject, Group
 from mobject.vectorized_mobject import VMobject
 from mobject.tex_mobject import TextMobject
 from animation import Animation
 from animation import sync_animation_run_times_and_rate_funcs
+from transform import Transform
 
-
+# 旋转
 class Rotating(Animation):
     CONFIG = {
-        "axes"       : [],
         "axis"       : OUT,
         "radians"    : 2*np.pi,
         "run_time"   : 5,
         "rate_func"  : None,
         "in_place"   : True,
         "about_point" : None,
+        "about_edge" : None,
     }
+
+    # 使用starting_submobject将其点赋值给submobject
     def update_submobject(self, submobject, starting_submobject, alpha):
         submobject.points = np.array(starting_submobject.points)
 
+    #
     def update_mobject(self, alpha):
         Animation.update_mobject(self, alpha)
-        axes = self.axes if self.axes else [self.axis]
         about_point = None
         if self.about_point is not None:
             about_point = self.about_point
@@ -33,10 +38,12 @@ class Rotating(Animation):
             self.about_point = self.mobject.get_center()
         self.mobject.rotate(
             alpha*self.radians, 
-            axes = axes,
-            about_point = self.about_point
+            axis = self.axis,
+            about_point = self.about_point,
+            about_edge = self.about_edge,
         )
 
+# 显示部分
 class ShowPartial(Animation):
     def update_submobject(self, submobject, starting_submobject, alpha):
         submobject.pointwise_become_partial(
@@ -46,6 +53,7 @@ class ShowPartial(Animation):
     def get_bounds(self, alpha):
         raise Exception("Not Implemented")
 
+# 展示创建
 class ShowCreation(ShowPartial):
     CONFIG = {
         "submobject_mode" : "one_at_a_time",
@@ -67,6 +75,7 @@ class Write(ShowCreation):
     def __init__(self, mob_or_text, **kwargs):
         digest_config(self, kwargs)        
         if isinstance(mob_or_text, str):
+            # 如果是一个str实例则传递给文本对象模块
             mobject = TextMobject(mob_or_text)
         else:
             mobject = mob_or_text
@@ -87,6 +96,7 @@ class Write(ShowCreation):
         else:
             self.run_time = 2
 
+# 绘制边沿再填充
 class DrawBorderThenFill(Animation):
     CONFIG = {
         "run_time" : 2,
@@ -149,17 +159,6 @@ class ShowCreationThenDestruction(ShowPassingFlash):
         "time_width" : 2.0,
         "run_time" : 1,
     }
-
-class MoveAlongPath(Animation):
-    def __init__(self, mobject, vmobject, **kwargs):
-        digest_config(self, kwargs, locals())
-        Animation.__init__(self, mobject, **kwargs)
-
-    def update_mobject(self, alpha):
-        self.mobject.shift(
-            self.vmobject.point_from_proportion(alpha) - \
-            self.mobject.get_center()
-        )
 
 class Homotopy(Animation):
     CONFIG = {
@@ -271,6 +270,34 @@ class MaintainPositionRelativeTo(Animation):
             self.diff
         )
 
+class WiggleOutThenIn(Animation):
+    CONFIG = {
+        "scale_value" : 1.1,
+        "rotation_angle" : 0.01*TAU,
+        "n_wiggles" : 6,
+        "run_time" : 2,
+        "scale_about_point" : None,
+        "rotate_about_point" : None,
+    }
+    def __init__(self, mobject, **kwargs):
+        digest_config(self, kwargs)
+        if self.scale_about_point is None:
+            self.scale_about_point = mobject.get_center()
+        if self.rotate_about_point is None:
+            self.rotate_about_point = mobject.get_center()
+        Animation.__init__(self, mobject, **kwargs)
+
+    def update_submobject(self, submobject, starting_sumobject, alpha):
+        submobject.points[:,:] = starting_sumobject.points
+        submobject.scale(
+            interpolate(1, self.scale_value, there_and_back(alpha)),
+            about_point = self.scale_about_point
+        )
+        submobject.rotate(
+            wiggle(alpha, self.n_wiggles)*self.rotation_angle,
+            about_point = self.rotate_about_point
+        )
+
 ### Animation modifiers ###
 
 class ApplyToCenters(Animation):
@@ -295,12 +322,14 @@ class ApplyToCenters(Animation):
                 center_mob.get_center()-mobject.get_center()
             )
 
+# lagged 极慢的
 class LaggedStart(Animation):
     CONFIG = {
         "run_time" : 2,
         "lag_ratio" : 0.5,
     }
     def __init__(self, AnimationClass, mobject, arg_creator = None, **kwargs):
+        # digest 消化 配置 转化为内部使用
         digest_config(self, kwargs)
         for key in "rate_func", "run_time", "lag_ratio":
             if key in kwargs:
@@ -332,67 +361,135 @@ class LaggedStart(Animation):
         for anim in self.subanimations:
             anim.clean_up(*args, **kwargs)
 
-class DelayByOrder(Animation):
-    """
-    Modifier of animation.
-
-    Warning: This will not work on all animation types.
-    """
-    CONFIG = {
-        "max_power" : 5
-    }
-    def __init__(self, animation, **kwargs):
-        digest_locals(self)
-        self.num_mobject_points = animation.mobject.get_num_points()        
-        kwargs.update(dict([
-            (attr, getattr(animation, attr))
-            for attr in Animation.CONFIG
-        ]))
-        Animation.__init__(self, animation.mobject, **kwargs)
-        self.name = str(self) + str(self.animation)
-
-    def update_mobject(self, alpha):
-        dim = self.mobject.DIM
-        alpha_array = np.array([
-            [alpha**power]*dim
-            for n in range(self.num_mobject_points)
-            for prop in [(n+1.0)/self.num_mobject_points]
-            for power in [1+prop*(self.max_power-1)]
-        ])
-        self.animation.update_mobject(alpha_array)
-
 class Succession(Animation):
     CONFIG = {
         "rate_func" : None,
     }
-    def __init__(self, *animations, **kwargs):
+    def __init__(self, *args, **kwargs):
+        """
+        Each arg will either be an animation, or an animation class 
+        followed by its arguments (and potentially a dict for 
+        configuration).
+
+        For example, 
+        Succession(
+            ShowCreation(circle),
+            Transform, circle, square,
+            Transform, circle, triangle,
+            ApplyMethod, circle.shift, 2*UP, {"run_time" : 2},
+        )
+        """
+        animations = []
+        state = {
+            "animations" : animations,
+            "curr_class" : None,
+            "curr_class_args" : [],
+            "curr_class_config" : {},
+        }
+        def invoke_curr_class(state):
+            if state["curr_class"] is None:
+                return
+            anim = state["curr_class"](
+                *state["curr_class_args"], 
+                **state["curr_class_config"]
+            )
+            state["animations"].append(anim)
+            anim.update(1)
+            state["curr_class"] = None
+            state["curr_class_args"] = []
+            state["curr_class_config"] = {}
+
+        for arg in args:
+            if isinstance(arg, Animation):
+                animations.append(arg)
+                arg.update(1)
+                invoke_curr_class(state)
+            elif isinstance(arg, type) and issubclass(arg, Animation):
+                invoke_curr_class(state)
+                state["curr_class"] = arg
+            elif isinstance(arg, dict):
+                state["curr_class_config"] = arg
+            else:
+                state["curr_class_args"].append(arg)
+        invoke_curr_class(state)
+        for anim in animations:
+            anim.update(0)
+        #筛选运行时间不等于0的动画
+        animations = filter (lambda x : x.run_time != 0, animations)
+
+        self.run_times = [anim.run_time for anim in animations]
         if "run_time" in kwargs:
             run_time = kwargs.pop("run_time")
         else:
-            run_time = sum([anim.run_time for anim in animations])
+            run_time = sum(self.run_times)
         self.num_anims = len(animations)
-        self.anims = (animations)
-        mobject = Mobject(*[anim.mobject for anim in self.anims])
-        self.last_index = 0
-        Animation.__init__(self, mobject, run_time = run_time, **kwargs)
+        self.animations = animations
+        #Have to keep track of this run_time, because Scene.play
+        #might very well mess with it.
+        self.original_run_time = run_time
+
+        # critical_alphas[i] is the start alpha of self.animations[i]
+        # critical_alphas[i + 1] is the end alpha of self.animations[i]
+        critical_times = np.concatenate(([0], np.cumsum(self.run_times)))
+        self.critical_alphas = map (lambda x : np.true_divide(x, run_time), critical_times) if self.num_anims > 0 else [0.0]
+
+        # self.scene_mobjects_at_time[i] is the scene's mobjects at start of self.animations[i]
+        # self.scene_mobjects_at_time[i + 1] is the scene mobjects at end of self.animations[i]
+        self.scene_mobjects_at_time = [None for i in range(self.num_anims + 1)]
+        self.scene_mobjects_at_time[0] = Group()
+        for i in range(self.num_anims):
+            self.scene_mobjects_at_time[i + 1] = self.scene_mobjects_at_time[i].copy()
+            self.animations[i].clean_up(self.scene_mobjects_at_time[i + 1])
+
+        self.current_alpha = 0
+        self.current_anim_index = 0 # If self.num_anims == 0, this is an invalid index, but so it goes
+        if self.num_anims > 0:
+            self.mobject = self.scene_mobjects_at_time[0]
+            self.mobject.add(self.animations[0].mobject)
+        else:
+            self.mobject = Group()
+
+        Animation.__init__(self, self.mobject, run_time = run_time, **kwargs)
+
+    # Beware: This does NOT take care of updating the subanimation to 0
+    # This was important to avoid a pernicious possibility in which subanimations were called
+    # with update(0) twice, which could in turn call a sub-Succession with update(0) four times,
+    # continuing exponentially
+    def jump_to_start_of_anim(self, index):
+        if index != self.current_anim_index:
+            self.mobject.remove(*self.mobject.submobjects) # Should probably have a cleaner "remove_all" method...
+            for m in self.scene_mobjects_at_time[index].submobjects:
+                self.mobject.add(m)
+            self.mobject.add(self.animations[index].mobject)
+
+        self.current_anim_index = index
+        self.current_alpha = self.critical_alphas[index]
 
     def update_mobject(self, alpha):
-        scaled_alpha = alpha*self.num_anims
-        index = min(int(scaled_alpha), len(self.anims)-1)
-        curr_anim = self.anims[index]
-        if index != self.last_index:
-            last_anim = self.anims[self.last_index]
-            last_anim.clean_up()
-            if last_anim.mobject is curr_anim.mobject:
-                #TODO, is there a way to do this that doesn't
-                #require leveraging implementation details of 
-                #Animations, and knowing about the different
-                #struction of Transform?
-                if hasattr(curr_anim, "target_mobject"):
-                    curr_anim.mobject.align_data(curr_anim.target_mobject)
-                curr_anim.starting_mobject = curr_anim.mobject.copy()
-        curr_anim.update(scaled_alpha - index)
-        self.last_index = index
+        if self.num_anims == 0:
+            return
+
+        i = 0
+        while self.critical_alphas[i + 1] < alpha:
+            i = i + 1
+            # TODO: Special handling if alpha < 0 or alpha > 1, to use
+            # first or last sub-animation
+
+        # At this point, we should have self.critical_alphas[i] <= alpha <= self.critical_alphas[i +1]
+
+        self.jump_to_start_of_anim(i)
+        sub_alpha = inverse_interpolate(
+            self.critical_alphas[i], 
+            self.critical_alphas[i + 1], 
+            alpha
+        )
+        self.animations[i].update(sub_alpha)
+
+    def clean_up(self, *args, **kwargs):
+        # We clean up as though we've played ALL animations, even if
+        # clean_up is called in middle of things
+        for anim in self.animations:
+            anim.clean_up(*args, **kwargs)
 
 class AnimationGroup(Animation):
     CONFIG = {
@@ -409,23 +506,6 @@ class AnimationGroup(Animation):
         for anim in self.sub_anims:
             anim.update(alpha)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    def clean_up(self, *args, **kwargs):
+        for anim in self.sub_anims:
+            anim.clean_up(*args, **kwargs)

@@ -1,3 +1,5 @@
+# _*_ coding:utf-8 _*_
+
 import numpy as np
 import itertools as it
 import os
@@ -7,13 +9,23 @@ from colour import Color
 import aggdraw
 
 from helpers import *
-from mobject import Mobject, PMobject, VMobject, ImageMobject, Group
+from mobject import Mobject, PMobject, VMobject, \
+    ImageMobject, Group, BackgroundColoredVMobject
 
+# Camera类是整个动画引擎中的一个基础类
 class Camera(object):
+    # CONFIG 是用来快捷添加类的变量
     CONFIG = {
         "background_image" : None,
         "pixel_shape" : (DEFAULT_HEIGHT, DEFAULT_WIDTH),
-        #this will be resized to match pixel_shape
+        # Note 1: space_shape will be resized to match pixel_shape
+        #
+        # Note 2: While pixel_shape indicates the actual full height
+        # and width of the pixel array, space_shape indicates only 
+        # half the height and half the width of space (extending from
+        # -space_height to +space_height vertically and from 
+        # -space_widtdh to +space_width horizontally)
+        # TODO: Rename these to SPACE_X_RADIUS, SPACE_Y_RADIUS
         "space_shape" : (SPACE_HEIGHT, SPACE_WIDTH),
         "space_center" : ORIGIN,
         "background_color" : BLACK,
@@ -22,12 +34,15 @@ class Camera(object):
         "max_allowable_norm" : 2*SPACE_WIDTH,
         "image_mode" : "RGBA",
         "n_rgb_coords" : 4,
-        "background_alpha" : 0, #Out of 255
+        "background_alpha" : 0, #Out of color_max_val
         "pixel_array_dtype" : 'uint8'
     }
 
     def __init__(self, background = None, **kwargs):
+        #初始化配置
         digest_config(self, kwargs, locals())
+        # numpy 的 iinfo 用来获取类型类，通过其max方法获取该类型最大值
+        self.color_max_val = np.iinfo(self.pixel_array_dtype).max
         self.init_background()
         self.resize_space_shape()
         self.reset()
@@ -47,9 +62,10 @@ class Camera(object):
             space_height = space_width/aspect_ratio
         self.space_shape = (space_height, space_width)
 
+    # 分为有背景图片和没有背景图片两种
     def init_background(self):
         if self.background_image is not None:
-            path = get_full_image_path(self.background_image)
+            path = get_full_raster_image_path(self.background_image)
             image = Image.open(path).convert(self.image_mode)
             height, width = self.pixel_shape
             #TODO, how to gracefully handle backgrounds 
@@ -60,48 +76,126 @@ class Camera(object):
             background_rgba = color_to_int_rgba(
                 self.background_color, alpha = self.background_alpha
             )
+            # 原始的背景点添加了rgba颜色的信息
             self.background = np.zeros(
                 list(self.pixel_shape)+[self.n_rgb_coords],
                 dtype = self.pixel_array_dtype
             )
+            # 赋值rgba颜色信息
             self.background[:,:] = background_rgba
 
+    # 从图片数组转化为指定模式的图片
     def get_image(self):
         return Image.fromarray(
             self.pixel_array,
             mode = self.image_mode
         )
 
+    # 获取像素数组
     def get_pixel_array(self):
         return self.pixel_array
 
-    def set_pixel_array(self, pixel_array):
-        self.pixel_array = np.array(pixel_array)
+    # 将像素转化为矩阵形式，如果是255这样的就直接返回，如果是浮点型就乘以转化后类型的最大值
+    def convert_pixel_array(self, pixel_array, convert_from_floats = False):
+        retval = np.array(pixel_array)
+        if convert_from_floats:
+            retval = np.apply_along_axis(
+                lambda f : (f * self.color_max_val).astype(self.pixel_array_dtype),
+                2,
+                retval)
+        return retval
 
-    def set_background(self, pixel_array):
-        self.background = np.array(pixel_array)
+    # 设置像素数组
+    def set_pixel_array(self, pixel_array, convert_from_floats = False):
+        self.pixel_array = self.convert_pixel_array(pixel_array, convert_from_floats)
 
+    # 设置背景
+    def set_background(self, pixel_array, convert_from_floats = False):
+        self.background = self.convert_pixel_array(pixel_array, convert_from_floats)
+
+    # 使用一个函数来决定背景的颜色，返回的是一个RGBA的数据
+    def set_background_from_func(self, coords_to_colors_func):
+        """
+        Sets background by using coords_to_colors_func to determine each pixel's color. Each input 
+        to coords_to_colors_func is an (x, y) pair in space (in ordinary space coordinates; not 
+        pixel coordinates), and each output is expected to be an RGBA array of 4 floats.
+        """
+
+        print "Starting set_background_from_func"
+        # 获取原始像素的坐标后输入到coords_to_colors_func函数中得到像素颜色结果
+        coords = self.get_coords_of_all_pixels()
+        new_background = np.apply_along_axis(
+            coords_to_colors_func,
+            2,
+            coords
+        )
+        self.set_background(new_background, convert_from_floats = True)
+
+        print "Ending set_background_from_func"
+
+    # 将像素数组设置为背景像素
     def reset(self):
-        self.set_pixel_array(np.array(self.background))
+        self.set_pixel_array(self.background)
 
-    def capture_mobject(self, mobject):
-        return self.capture_mobjects([mobject])
+    ####
 
-    def capture_mobjects(self, mobjects, include_submobjects = True):
-        if include_submobjects:
-            mobjects = it.chain(*[
-                mob.family_members_with_points() 
-                for mob in mobjects
+    def extract_mobject_family_members(self, mobjects, only_those_with_points = False):
+        if only_those_with_points:
+            # 过滤出有点的对象
+            method = Mobject.family_members_with_points
+        else:
+            method = Mobject.submobject_family
+        # 返回不重复，并满足要求的经过处理的对象
+        return remove_list_redundancies(list(
+            it.chain(*[
+                method(m)
+                for m in mobjects
+                if not (isinstance(m, VMobject) and m.is_subpath)
             ])
+        ))
+
+    # 获取对象来进行显示
+    def get_mobjects_to_display(
+        self, mobjects, 
+        include_submobjects = True,
+        excluded_mobjects = None,
+        z_buff_func = lambda m : m.get_center()[2]
+        ):
+        if include_submobjects:
+            #过滤包含点的对象出来
+            mobjects = self.extract_mobject_family_members(
+                mobjects, only_those_with_points = True
+            )
+            #检查需要排除显示的对象
+            if excluded_mobjects:
+                all_excluded = self.extract_mobject_family_members(
+                    excluded_mobjects
+                )
+                # 过滤掉需要排除的对象
+                mobjects = list_difference_update(mobjects, all_excluded)
+
+        # 将对象进行排序，通过比较中心位置的方式
+        return sorted(mobjects, lambda a, b: cmp(z_buff_func(a), z_buff_func(b)))
+
+    # capture 捕获对象
+    def capture_mobject(self, mobject, **kwargs):
+        return self.capture_mobjects([mobject], **kwargs)
+
+    def capture_mobjects(self, mobjects, **kwargs):
+        # 获取需要进行显示的对象
+        mobjects = self.get_mobjects_to_display(mobjects, **kwargs)
         vmobjects = []
         for mobject in mobjects:
-            if isinstance(mobject, VMobject):
+            # 是vmobjec对象且不是背景颜色的vmobject对象
+            if isinstance(mobject, VMobject) and not isinstance(mobject, BackgroundColoredVMobject):
                 vmobjects.append(mobject)
             elif len(vmobjects) > 0:
                 self.display_multiple_vectorized_mobjects(vmobjects)
                 vmobjects = []
                 
-            if isinstance(mobject, PMobject):
+            if isinstance(mobject, BackgroundColoredVMobject):
+                self.display_background_colored_vmobject(mobject)
+            elif isinstance(mobject, PMobject):
                 self.display_point_cloud(
                     mobject.points, mobject.rgbas, 
                     self.adjusted_thickness(mobject.stroke_width)
@@ -121,10 +215,14 @@ class Camera(object):
         if len(vmobjects) == 0:
             return
         #More efficient to bundle together in one "canvas"
+        # 获取一个画布
         image = Image.fromarray(self.pixel_array, mode = self.image_mode)
+        # canvas 画布，使用draw加载一个画布
         canvas = aggdraw.Draw(image)
+        #将一个一个的vmobject对象绘制在canvas画布上
         for vmobject in vmobjects:
             self.display_vectorized(vmobject, canvas)
+        # 更新画布
         canvas.flush()
 
         self.pixel_array[:,:] = image
@@ -134,31 +232,40 @@ class Camera(object):
             #Subpath vectorized mobjects are taken care
             #of by their parent
             return
+        #获取笔和用于填充的刷子
         pen, fill = self.get_pen_and_fill(vmobject)
+        #获取svg(矢量图)路径信息
         pathstring = self.get_pathstring(vmobject)
+        #使用symbol创建一个符号对象后续可以操作其对应的svg图片进行移动
         symbol = aggdraw.Symbol(pathstring)
+        #在给定位置绘制符号，使用fill来填充svg，并用pen来绘制svg的边沿
         canvas.symbol((0, 0), symbol, pen, fill)
 
     def get_pen_and_fill(self, vmobject):
+        # aggdraw模块绘制颜色的pen输入参数包括"颜色"和"笔宽"
         pen = aggdraw.Pen(
             self.color_to_hex_l(self.get_stroke_color(vmobject)),
             max(vmobject.stroke_width, 0)
         )
+        # brush 刷子，需要颜色和不透明度作为参数，不透明度以255表示完全不透明
         fill = aggdraw.Brush(
             self.color_to_hex_l(self.get_fill_color(vmobject)),
-            opacity = int(255*vmobject.get_fill_opacity())
+            opacity = int(self.color_max_val*vmobject.get_fill_opacity())
         )
         return (pen, fill)
 
+    #获取16进制的颜色
     def color_to_hex_l(self, color):
         try:
             return color.get_hex_l()
         except:
             return Color(BLACK).get_hex_l()
 
+    # 获取画笔颜色
     def get_stroke_color(self, vmobject):
         return vmobject.get_stroke_color()
 
+    #获取填充颜色
     def get_fill_color(self, vmobject):
         return vmobject.get_fill_color()
 
@@ -170,6 +277,7 @@ class Camera(object):
             if len(points) == 0:
                 continue
             points = self.align_points_to_camera(points)
+            # 点转化为像素坐标
             coords = self.points_to_pixel_coords(points)
             start = "M%d %d"%tuple(coords[0])
             #(handle1, handle2, anchor) tripletes
@@ -185,6 +293,31 @@ class Camera(object):
             result += " ".join([start] + cubics + [end])
         return result
 
+    def display_background_colored_vmobject(self, cvmobject):
+        mob_array = np.zeros(
+            self.pixel_array.shape,
+            dtype = self.pixel_array_dtype
+        )
+        image = Image.fromarray(mob_array, mode = self.image_mode)
+        # 完成画布构造
+        canvas = aggdraw.Draw(image)
+        self.display_vectorized(cvmobject, canvas)
+        #完成cvmobject对象绘制
+        canvas.flush()
+        cv_background = cvmobject.background_array
+        if not np.all(self.pixel_array.shape == cv_background):
+            cvmobject.resize_background_array_to_match(self.pixel_array)
+            cv_background = cvmobject.background_array
+        array = np.array(
+            (np.array(mob_array).astype('float')/255.)*\
+            np.array(cv_background),
+            dtype = self.pixel_array_dtype
+        )
+        self.pixel_array[:,:] = np.maximum(
+            self.pixel_array, array
+        )
+
+
     def display_point_cloud(self, points, rgbas, thickness):
         if len(points) == 0:
             return
@@ -193,12 +326,12 @@ class Camera(object):
         pixel_coords = self.thickened_coordinates(
             pixel_coords, thickness
         )
-        rgb_len = self.pixel_array.shape[2]
+        rgba_len = self.pixel_array.shape[2]
 
-        rgbas = (255*rgbas).astype('uint8')
+        rgbas = (self.color_max_val*rgbas).astype(self.pixel_array_dtype)
         target_len = len(pixel_coords)
         factor = target_len/len(rgbas)
-        rgbas = np.array([rgbas]*factor).reshape((target_len, rgb_len))
+        rgbas = np.array([rgbas]*factor).reshape((target_len, rgba_len))
 
         on_screen_indices = self.on_screen_pixels(pixel_coords)        
         pixel_coords = pixel_coords[on_screen_indices]        
@@ -211,9 +344,9 @@ class Camera(object):
         indices = np.dot(pixel_coords, flattener)[:,0]
         indices = indices.astype('int')
         
-        new_pa = self.pixel_array.reshape((ph*pw, rgb_len))
+        new_pa = self.pixel_array.reshape((ph*pw, rgba_len))
         new_pa[indices] = rgbas
-        self.pixel_array = new_pa.reshape((ph, pw, rgb_len))
+        self.pixel_array = new_pa.reshape((ph, pw, rgba_len))
 
     def display_image_mobject(self, image_mobject):
         corner_coords = self.points_to_pixel_coords(image_mobject.points)
@@ -284,7 +417,7 @@ class Camera(object):
 
     def overlay_rgba_array(self, arr):
         # """ Overlays arr onto self.pixel_array with relevant alphas"""
-        bg, fg = self.pixel_array/255.0, arr/255.0
+        bg, fg = fdiv(self.pixel_array, self.color_max_val), fdiv(arr, self.color_max_val)
         bga, fga = [arr[:,:,3:] for arr in bg, fg]
         alpha_sum = fga + (1-fga)*bga
         with np.errstate(divide = 'ignore', invalid='ignore'):
@@ -293,7 +426,7 @@ class Camera(object):
                 np.divide(bg[:,:,:3]*(1-fga)*bga, alpha_sum),
             ])
         bg[:,:,3:] = 1 - (1 - bga)*(1 - fga)
-        self.pixel_array = (255*bg).astype(self.pixel_array_dtype)
+        self.pixel_array = (self.color_max_val*bg).astype(self.pixel_array_dtype)
 
     def align_points_to_camera(self, points):
         ## This is where projection should live
@@ -336,7 +469,7 @@ class Camera(object):
             pixel_coords[:,1] >= 0,
             pixel_coords[:,1] < self.pixel_shape[0],
         ])
-
+    # thickness 粗细
     def adjusted_thickness(self, thickness):
         big_shape = PRODUCTION_QUALITY_CAMERA_CONFIG["pixel_shape"]
         factor = sum(big_shape)/sum(self.pixel_shape)
@@ -344,10 +477,7 @@ class Camera(object):
 
     def get_thickening_nudges(self, thickness):
         _range = range(-thickness/2+1, thickness/2+1)
-        return np.array(
-            list(it.product([0], _range))+
-            list(it.product(_range, [0]))
-        )
+        return np.array(list(it.product(_range, _range)))
 
     def thickened_coordinates(self, pixel_coords, thickness):
         nudges = self.get_thickening_nudges(thickness)
@@ -358,8 +488,32 @@ class Camera(object):
         size = pixel_coords.size
         return pixel_coords.reshape((size/2, 2))
 
+    # coords 坐标，获取所有像素的坐标
+    def get_coords_of_all_pixels(self):
+        # These are in x, y order, to help me keep things straight
+        full_space_dims = np.array(self.space_shape)[::-1] * 2
+        full_pixel_dims = np.array(self.pixel_shape)[::-1]
 
+        # These are addressed in the same y, x order as in pixel_array, but the values in them
+        # are listed in x, y order
+        uncentered_pixel_coords = np.indices(self.pixel_shape)[::-1].transpose(1, 2, 0)
+        uncentered_space_coords = fdiv(
+            uncentered_pixel_coords * full_space_dims, 
+            full_pixel_dims)
+        # Could structure above line's computation slightly differently, but figured (without much 
+        # thought) multiplying by space_shape first, THEN dividing by pixel_shape, is probably 
+        # better than the other order, for avoiding underflow quantization in the division (whereas 
+        # overflow is unlikely to be a problem)
 
+        centered_space_coords = (uncentered_space_coords - fdiv(full_space_dims, 2))
+
+        # Have to also flip the y coordinates to account for pixel array being listed in 
+        # top-to-bottom order, opposite of screen coordinate convention
+        centered_space_coords = centered_space_coords * (1, -1)
+
+        return centered_space_coords
+
+# 移动镜头
 class MovingCamera(Camera):
     """
     Stays in line with the height, width and position
@@ -388,11 +542,100 @@ class MovingCamera(Camera):
         )
 
 
+class MappingCamera(Camera):
+    CONFIG = {
+        "mapping_func" : lambda p : p,
+        "min_anchor_points" : 50,
+        "allow_object_intrusion" : False
+    }
 
+    def points_to_pixel_coords(self, points):
+        return Camera.points_to_pixel_coords(self, np.apply_along_axis(self.mapping_func, 1, points))
+    
+    def capture_mobjects(self, mobjects, **kwargs):
+        mobjects = self.get_mobjects_to_display(mobjects, **kwargs)
+        if self.allow_object_intrusion:
+            mobject_copies = mobjects
+        else:
+            mobject_copies = [mobject.copy() for mobject in mobjects]
+        for mobject in mobject_copies:
+            if isinstance(mobject, VMobject) and \
+            0 < mobject.get_num_anchor_points() < self.min_anchor_points:
+                mobject.insert_n_anchor_points(self.min_anchor_points)
+        Camera.capture_mobjects(
+            self, mobject_copies, 
+            include_submobjects = False,
+            excluded_mobjects = None,
+        )
 
+# Note: This allows layering of multiple cameras onto the same portion of the pixel array,
+# the later cameras overwriting the former
+#
+# TODO: Add optional separator borders between cameras (or perhaps peel this off into a 
+# CameraPlusOverlay class)
+class MultiCamera(Camera):
+    def __init__(self, *cameras_with_start_positions, **kwargs):
+        self.shifted_cameras = [
+            DictAsObject(
+            {
+                "camera" : camera_with_start_positions[0], 
+                "start_x" : camera_with_start_positions[1][1],
+                "start_y" : camera_with_start_positions[1][0],
+                "end_x" : camera_with_start_positions[1][1] + camera_with_start_positions[0].pixel_shape[1],
+                "end_y" : camera_with_start_positions[1][0] + camera_with_start_positions[0].pixel_shape[0],
+            })
+            for camera_with_start_positions in cameras_with_start_positions
+        ]
+        Camera.__init__(self, **kwargs)
 
+    def capture_mobjects(self, mobjects, **kwargs):
+        for shifted_camera in self.shifted_cameras:
+            shifted_camera.camera.capture_mobjects(mobjects, **kwargs)
+            
+            self.pixel_array[
+                shifted_camera.start_y:shifted_camera.end_y, 
+                shifted_camera.start_x:shifted_camera.end_x] \
+            = shifted_camera.camera.pixel_array
 
+    def set_background(self, pixel_array, **kwargs):
+        for shifted_camera in self.shifted_cameras:
+            shifted_camera.camera.set_background(
+                pixel_array[
+                    shifted_camera.start_y:shifted_camera.end_y, 
+                    shifted_camera.start_x:shifted_camera.end_x],
+                **kwargs
+            )
 
+    def set_pixel_array(self, pixel_array, **kwargs):
+        Camera.set_pixel_array(self, pixel_array, **kwargs)
+        for shifted_camera in self.shifted_cameras:
+            shifted_camera.camera.set_pixel_array(
+                pixel_array[
+                    shifted_camera.start_y:shifted_camera.end_y, 
+                    shifted_camera.start_x:shifted_camera.end_x],
+                **kwargs
+            )
 
+    def init_background(self):
+        Camera.init_background(self)
+        for shifted_camera in self.shifted_cameras:
+            shifted_camera.camera.init_background()
+
+# A MultiCamera which, when called with two full-size cameras, initializes itself
+# as a splitscreen, also taking care to resize each individual camera within it
+class SplitScreenCamera(MultiCamera):
+    def __init__(self, left_camera, right_camera, **kwargs):
+        digest_config(self, kwargs)
+        self.left_camera = left_camera
+        self.right_camera = right_camera
+        
+        half_width = self.pixel_shape[1] / 2
+        for camera in [self.left_camera, self.right_camera]:
+            camera.pixel_shape = (self.pixel_shape[0], half_width) # TODO: Round up on one if width is odd
+            camera.init_background()
+            camera.resize_space_shape()
+            camera.reset()
+
+        MultiCamera.__init__(self, (left_camera, (0, 0)), (right_camera, (0, half_width)))
 
 

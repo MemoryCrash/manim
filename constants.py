@@ -1,3 +1,5 @@
+# _*_ coding:utf-8 _*_
+
 import os
 import numpy as np
 
@@ -18,7 +20,7 @@ MEDIUM_QUALITY_CAMERA_CONFIG = {
 }
 
 LOW_QUALITY_CAMERA_CONFIG = {
-    "pixel_shape" : (480, 853),
+    "pixel_shape" : (480, 854),
 }
 
 DEFAULT_POINT_DENSITY_2D = 25 
@@ -43,7 +45,7 @@ DEFAULT_MOBJECT_TO_MOBJECT_BUFFER = MED_SMALL_BUFF
 #All in seconds
 DEFAULT_ANIMATION_RUN_TIME = 1.0
 DEFAULT_POINTWISE_FUNCTION_RUN_TIME = 3.0
-DEFAULT_DITHER_TIME = 1.0
+DEFAULT_WAIT_TIME = 1.0
 
 
 ORIGIN = np.array(( 0., 0., 0.))
@@ -59,32 +61,42 @@ BOTTOM     = SPACE_HEIGHT*DOWN
 LEFT_SIDE  = SPACE_WIDTH*LEFT
 RIGHT_SIDE = SPACE_WIDTH*RIGHT
 
+TAU = 2*np.pi
+
 # Change this to point to where you want 
 # animation files to output
-MOVIE_DIR         = os.path.join(os.path.expanduser('~'), "Documents/e_manim/manim/vedio/")
-STAGED_SCENES_DIR = os.path.join(MOVIE_DIR, "staged_scenes")
+MEDIA_DIR = os.path.join("/Users/dailei/Documents/ori_manim/manim/", "media/")
+
+ANIMATIONS_DIR = os.path.join(MEDIA_DIR, "animations")
+RASTER_IMAGE_DIR = os.path.join(MEDIA_DIR, "designs", "raster_images")
+SVG_IMAGE_DIR = os.path.join(MEDIA_DIR, "designs", "svg_images")
+#TODO, staged scenes should really go into a subdirectory of a given scenes directory
+STAGED_SCENES_DIR = os.path.join(ANIMATIONS_DIR, "staged_scenes") 
 ###
 THIS_DIR          = os.path.dirname(os.path.realpath(__file__))
 FILE_DIR          = os.path.join(THIS_DIR, "files")
-IMAGE_DIR         = os.path.join(FILE_DIR, "images")
-GIF_DIR           = os.path.join(FILE_DIR, "gifs")
 TEX_DIR           = os.path.join(FILE_DIR, "Tex")
-TEX_IMAGE_DIR     = os.path.join(IMAGE_DIR, "Tex")
+TEX_IMAGE_DIR     = TEX_DIR #TODO, What is this doing?
+#These two may be depricated now.
 MOBJECT_DIR       = os.path.join(FILE_DIR, "mobjects")
 IMAGE_MOBJECT_DIR = os.path.join(MOBJECT_DIR, "image")
 
-for folder in [FILE_DIR, IMAGE_DIR, GIF_DIR, MOVIE_DIR, TEX_DIR,
+if not os.path.exists(MEDIA_DIR):
+    raise Exception("""
+        Redefine MEDIA_DIR in constants.py to point to 
+        a valid directory where movies and images will 
+        be written
+    """)
+for folder in [FILE_DIR, RASTER_IMAGE_DIR, SVG_IMAGE_DIR, ANIMATIONS_DIR, TEX_DIR,
                TEX_IMAGE_DIR, MOBJECT_DIR, IMAGE_MOBJECT_DIR,
                STAGED_SCENES_DIR]:
     if not os.path.exists(folder):
-        os.mkdir(folder)
+        os.makedirs(folder)
 
 TEX_TEXT_TO_REPLACE = "YourTextHere"
 TEMPLATE_TEX_FILE  = os.path.join(THIS_DIR, "template.tex")
 TEMPLATE_TEXT_FILE = os.path.join(THIS_DIR, "text_template.tex")
 
-
-LOGO_PATH = os.path.join(IMAGE_DIR, "logo.png")
 
 FFMPEG_BIN = "ffmpeg"
 
@@ -150,7 +162,9 @@ COLOR_MAP = {
     "ORANGE"      : "#FF862F",
 }
 PALETTE = COLOR_MAP.values()
+# 将COLOR_MAP中的信息放到局部变量中去，当其它模块导入constants时也会导入这些变量信息。
 locals().update(COLOR_MAP)
+# 将以_C结尾的键返回，去掉_C并将原来的值赋值给它
 for name in filter(lambda s : s.endswith("_C"), COLOR_MAP.keys()):
     locals()[name.replace("_C", "")] = locals()[name]
 

@@ -1,3 +1,4 @@
+# _*_ coding:utf-8 _*_
 from helpers import *
 
 from mobject import Mobject
@@ -6,7 +7,8 @@ from mobject.svg_mobject import SVGMobject
 from mobject.tex_mobject import TextMobject, TexMobject
 
 from animation import Animation
-from animation.simple_animations import Rotating
+from animation.simple_animations import Rotating, LaggedStart
+from animation.transform import ApplyMethod, FadeIn, GrowFromCenter
 
 from topics.geometry import Circle, Line, Rectangle, Square, \
     Arc, Polygon, SurroundingRectangle
@@ -17,8 +19,12 @@ class Lightbulb(SVGMobject):
         "file_name" : "lightbulb",
         "height" : 1,
         "stroke_color" : YELLOW,
+        "stroke_width" : 3,
+        "fill_color" : YELLOW,
+        "fill_opacity" : 0,
     }
 
+# Bitcoin的logo
 class BitcoinLogo(SVGMobject):
     CONFIG = {
         "file_name" : "Bitcoin_logo",
@@ -33,6 +39,7 @@ class BitcoinLogo(SVGMobject):
         self[0].set_fill(self.fill_color, self.fill_opacity)
         self[1].set_fill(self.inner_color, 1)
 
+#吉他
 class Guitar(SVGMobject):
     CONFIG = {
         "file_name" : "guitar",
@@ -43,6 +50,7 @@ class Guitar(SVGMobject):
         "stroke_width" : 0.5,
     }
 
+#太阳镜
 class SunGlasses(SVGMobject):
     CONFIG = {
         "file_name" : "sunglasses",
@@ -57,6 +65,7 @@ class SunGlasses(SVGMobject):
         )
         self.move_to(pi_creature.eyes, UP)
 
+#速度计
 class Speedometer(VMobject):
     CONFIG = {
         "arc_angle" : 4*np.pi/3,
@@ -90,7 +99,7 @@ class Speedometer(VMobject):
         )
         needle.stretch_to_fit_width(self.needle_width)
         needle.stretch_to_fit_height(self.needle_height)
-        needle.rotate(start_angle - np.pi/2)
+        needle.rotate(start_angle - np.pi/2, about_point = ORIGIN)
         self.add(needle)
         self.needle = needle
 
@@ -150,7 +159,7 @@ class PartyHat(SVGMobject):
         "pi_creature" : None,
         "stroke_width" : 0,
         "fill_opacity" : 1,
-        "propogate_style_to_family" : True,
+        "propagate_style_to_family" : True,
         "frills_colors" : [MAROON_B, PURPLE],
         "cone_color" : GREEN,
         "dots_colors" : [YELLOW],
@@ -241,8 +250,8 @@ class Laptop(VGroup):
         self.axis = axis
 
         self.add(body, screen_plate, axis)
-        self.rotate(5*np.pi/12, LEFT)
-        self.rotate(np.pi/6, DOWN)
+        self.rotate(5*np.pi/12, LEFT, about_point = ORIGIN)
+        self.rotate(np.pi/6, DOWN, about_point = ORIGIN)
 
 class PatreonLogo(SVGMobject):
     CONFIG = {
@@ -252,18 +261,18 @@ class PatreonLogo(SVGMobject):
         "fill_opacity" : 1,
         "stroke_width" : 0,
         "width" : 4,
-        "propogate_style_to_family" : True
+        "propagate_style_to_family" : True
     }
     def __init__(self, **kwargs):
         SVGMobject.__init__(self, **kwargs)
         self.scale_to_fit_width(self.width)
         self.center()
 
+#视频标志
 class VideoIcon(SVGMobject):
     CONFIG = {
         "file_name" : "video_icon",
         "width" : 2*SPACE_WIDTH/12.,
-        "considered_smooth" : False,
     }
     def __init__(self, **kwargs):
         SVGMobject.__init__(self, **kwargs)
@@ -271,9 +280,8 @@ class VideoIcon(SVGMobject):
         self.scale_to_fit_width(self.width)
         self.set_stroke(color = WHITE, width = 0)
         self.set_fill(color = WHITE, opacity = 1)
-        for mob in self:
-            mob.considered_smooth = False
 
+#视频系列标志
 class VideoSeries(VGroup):
     CONFIG = {
         "num_videos" : 11,
@@ -309,7 +317,7 @@ class Headphones(SVGMobject):
 
 class Clock(VGroup):
     CONFIG = {
-        "propogate_style_to_family" : True,
+        "propagate_style_to_family" : True,
     }
     def __init__(self, **kwargs):
         circle = Circle()
@@ -374,7 +382,7 @@ class Bubble(SVGMobject):
         "width"  : 8,
         "bubble_center_adjustment_factor" : 1./8,
         "file_name" : None,
-        "propogate_style_to_family" : True,
+        "propagate_style_to_family" : True,
         "fill_color" : BLACK,
         "fill_opacity" : 0.8,
         "stroke_color" : WHITE,
@@ -384,7 +392,11 @@ class Bubble(SVGMobject):
         digest_config(self, kwargs, locals())
         if self.file_name is None:
             raise Exception("Must invoke Bubble subclass")
-        SVGMobject.__init__(self, **kwargs)
+        try:
+            SVGMobject.__init__(self, **kwargs)
+        except IOError as err:
+            self.file_name = os.path.join(FILE_DIR, self.file_name)
+            SVGMobject.__init__(self, **kwargs)
         self.center()
         self.stretch_to_fit_height(self.height)
         self.stretch_to_fit_width(self.width)
@@ -480,3 +492,112 @@ class ThoughtBubble(Bubble):
     def make_green_screen(self):
         self.submobjects[-1].set_fill(GREEN_SCREEN, opacity = 1)
         return self
+
+
+#TODO: Where should this live?
+class Broadcast(LaggedStart):
+    CONFIG = {
+        "small_radius" : 0.0,
+        "big_radius" : 5,
+        "n_circles" : 5,
+        "start_stroke_width" : 8,
+        "color" : WHITE,
+        "remover" : True,
+        "lag_ratio" : 0.7,
+        "run_time" : 3,
+        "remover" : True,
+    }
+    def __init__(self, focal_point, **kwargs):
+        digest_config(self, kwargs)
+        circles = VGroup()
+        for x in range(self.n_circles):
+            circle = Circle(
+                radius = self.big_radius, 
+                stroke_color = BLACK,
+                stroke_width = 0,
+            )
+            circle.move_to(focal_point)
+            circle.save_state()
+            circle.scale_to_fit_width(self.small_radius*2)
+            circle.set_stroke(self.color, self.start_stroke_width)
+            circles.add(circle)
+        LaggedStart.__init__(
+            self, ApplyMethod, circles,
+            lambda c : (c.restore,),
+            **kwargs
+
+        )
+
+class BraceLabel(VMobject):
+    CONFIG = {
+        "label_constructor" : TexMobject,
+        "label_scale" : 1,
+    }
+    def __init__(self, obj, text, brace_direction = DOWN, **kwargs):
+        VMobject.__init__(self, **kwargs)
+        self.brace_direction = brace_direction
+        if isinstance(obj, list): obj = VMobject(*obj)
+        self.brace = Brace(obj, brace_direction, **kwargs)
+
+        if isinstance(text, tuple) or isinstance(text, list):
+            self.label = self.label_constructor(*text, **kwargs)
+        else: self.label = self.label_constructor(str(text))
+        if self.label_scale != 1: self.label.scale(self.label_scale)
+
+        self.brace.put_at_tip(self.label)
+        self.submobjects = [self.brace, self.label]
+
+    def creation_anim(self, label_anim = FadeIn, brace_anim = GrowFromCenter):
+        return AnimationGroup(brace_anim(self.brace), label_anim(self.label))
+
+    def shift_brace(self, obj, **kwargs):
+        if isinstance(obj, list): obj = VMobject(*obj)
+        self.brace = Brace(obj, self.brace_direction, **kwargs)
+        self.brace.put_at_tip(self.label)
+        self.submobjects[0] = self.brace
+        return self
+
+    def change_label(self, *text, **kwargs):
+        self.label = self.label_constructor(*text, **kwargs)
+        if self.label_scale != 1: self.label.scale(self.label_scale)
+
+        self.brace.put_at_tip(self.label)
+        self.submobjects[1] = self.label
+        return self
+
+    def change_brace_label(self, obj, *text):
+        self.shift_brace(obj)
+        self.change_label(*text)
+        return self
+
+    def copy(self):
+        copy_mobject = copy.copy(self)
+        copy_mobject.brace = self.brace.copy()
+        copy_mobject.label = self.label.copy()
+        copy_mobject.submobjects = [copy_mobject.brace, copy_mobject.label]
+
+        return copy_mobject
+
+class BraceText(BraceLabel):
+    CONFIG = {
+        "label_constructor" : TextMobject
+    }
+
+class DashedMobject(VMobject):
+    CONFIG = {
+        "dashes_num" : 15,
+        "spacing"    : 0.5,
+        "color"      : WHITE
+    }
+    def __init__(self, mob, **kwargs):
+        digest_locals(self)
+        VMobject.__init__(self, **kwargs)
+
+        buff = float(self.spacing) / self.dashes_num
+
+        for i in range(self.dashes_num):
+            a = ((1+buff) * i)/self.dashes_num
+            b = 1-((1+buff) * (self.dashes_num-1-i)) / self.dashes_num
+            dash = VMobject(color = self.color)
+            dash.pointwise_become_partial(mob, a, b)
+            self.submobjects.append(dash)

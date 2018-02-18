@@ -1,3 +1,4 @@
+# _*_ coding:utf-8 _*_
 from helpers import *
 
 from scene import Scene
@@ -15,6 +16,7 @@ from topics.geometry import Circle, Line, Rectangle, Square, Arc, Polygon
 
 EPSILON = 0.0001
 
+#采样空间场景
 class SampleSpaceScene(Scene):
     def get_sample_space(self, **config):
         self.sample_space = SampleSpace(**config)

@@ -1,3 +1,4 @@
+# _*_ coding:utf-8 _*_
 from helpers import *
 
 from mobject.tex_mobject import TexMobject, TextMobject
@@ -10,7 +11,7 @@ from topics.geometry import Arrow, Circle, Dot
 # from topics.fractals import *
 from scene import Scene
 
-
+#计数场景
 class CountingScene(Scene):
     CONFIG = {
         "digit_place_colors" : [YELLOW, MAROON_B, RED, GREEN, BLUE, PURPLE_D],
@@ -225,6 +226,7 @@ class CountInBinaryTo256(PowerCounter):
     def get_template_configuration(self):
         return [ORIGIN, UP]
 
+# Factorial 阶乘
 class FactorialBase(CountingScene):
     CONFIG = {
         "dot_configuration_height" : 1,
